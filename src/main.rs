@@ -81,7 +81,7 @@ fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json
 }
 
 fn main() -> io::Result<()> {
-    let config = parse_config("src/sysctl.conf")?;
+    let config = parse_config("config/sysctl.conf")?;
 
     println!("{}", serde_json::to_string_pretty(&config).unwrap());
 
