@@ -53,6 +53,7 @@ fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json
     let mut config: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
     // let mut config: HashMap<String, serde_json::Value> = HashMap::new();
 
+    // forループ
     // for line in reader.lines() {
     //     if let Ok(line) = line {
     //         if let Some((key, value)) = parse_line(&line) {
