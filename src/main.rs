@@ -2,9 +2,6 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-use serde_json::{Map, Value}; // ここでMapをインポート
-
-// 文字列の前後の空白を削除する関数
 fn trim(s: &str) -> String {
     s.trim().to_string()
 }
@@ -14,7 +11,6 @@ fn parse_line(line: &str) -> Option<(String, String)> {
     let trimmed_line = trim(line);
 
     // コメントや空行を無視
-
     if trimmed_line.is_empty() || trimmed_line.starts_with('#') || trimmed_line.starts_with(';') {
         return None;
     }
@@ -31,16 +27,16 @@ fn parse_line(line: &str) -> Option<(String, String)> {
 
 // ネストされたキーに対応する関数
 fn set_nested_map(
-    map: &mut Map<String, Value>, // serde_json::Map を使用
+    map: &mut serde_json::Map<String, serde_json::Value>,
     keys: &[&str],
-    value: Value,
+    value: serde_json::Value,
 ) {
     let mut current = map;
 
     for &key in &keys[..keys.len() - 1] {
         current = current
             .entry(key.to_string())
-            .or_insert_with(|| Value::Object(Map::new())) // serde_json::Map に合わせる
+            .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new())) // serde_json::Map に合わせる
             .as_object_mut()
             .unwrap();
     }
@@ -49,15 +45,24 @@ fn set_nested_map(
 }
 
 // 設定ファイルをパースする関数
-fn parse_config(filename: &str) -> io::Result<Map<String, Value>> {
+fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json::Value>> {
     let path = Path::new(filename);
     let file = File::open(&path)?;
     let reader = io::BufReader::new(file);
 
-    let mut config: Map<String, Value> = Map::new(); // serde_json::Map を使用
+    let mut config: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    // let mut config: HashMap<String, serde_json::Value> = HashMap::new();
 
-    // 冗長な if let を flat_map と filter_map で置き換える
-    // エラーログ出力
+    // for line in reader.lines() {
+    //     if let Ok(line) = line {
+    //         if let Some((key, value)) = parse_line(&line) {
+    //             let keys: Vec<&str> = key.split('.').collect();
+    //             set_nested_map(&mut config, &keys, serde_json::Value::String(value));
+    //         }
+    //     }
+    // }
+
+    // forループからfilter_mapに変更
     reader
         .lines() // Result<String, io::Error> を返す
         .inspect(|line| {
@@ -69,17 +74,15 @@ fn parse_config(filename: &str) -> io::Result<Map<String, Value>> {
         .filter_map(|line| parse_line(&line)) // パースできた行だけを処理
         .for_each(|(key, value)| {
             let keys: Vec<&str> = key.split('.').collect();
-            set_nested_map(&mut config, &keys, Value::String(value));
+            set_nested_map(&mut config, &keys, serde_json::Value::String(value));
         });
 
     Ok(config)
 }
 
 fn main() -> io::Result<()> {
-    // 設定ファイルをパース
     let config = parse_config("src/sysctl.conf")?;
 
-    // 結果を出力
     println!("{}", serde_json::to_string_pretty(&config).unwrap());
 
     Ok(())
