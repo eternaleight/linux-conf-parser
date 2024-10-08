@@ -64,8 +64,14 @@ fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json
     // }
 
     // forループからmap_whileに変更
+    // システム全体の一貫性やクリティカルな設定が重要な場合（サービスなどでこの処理がシステム全体に深刻な影響を与える場合はエラーが発生したら止める）
     // reader
     //     .lines()
+    //     .inspect(|result| {
+    //         if let Err(ref e) = result {
+    //             eprintln!("Error reading line: {}", e); // エラーメッセージをログに出力
+    //         }
+    //     })
     //     .map_while(Result::ok) // 成功した行だけを処理し、エラーが出たら処理を終了
     //     .filter_map(|line| parse_line(&line)) // パースできた行だけを処理
     //     .for_each(|(key, value)| {
@@ -74,6 +80,7 @@ fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json
     //     });
 
     // map_whileからfilter_map, inspectに変更、エラーが出たら処理を終了したくないのでfilter_map(Result::ok)を使用、inspect を使って、エラーがあった時にその情報を出力しつつ、処理を進める。
+    // 辞書型・Map等に格納するプログラムという使い方に関して、まずは、ファイルの柔軟な動作や非クリティカルな設定が重要だと思うので、エラーが発生しても処理を続ける選択をしました。
     reader
         .lines() // Result<String, io::Error> を返す
         .inspect(|line| {
