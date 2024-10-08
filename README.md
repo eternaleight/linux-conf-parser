@@ -1,4 +1,4 @@
-# linux sysctl.confファイルパーサ
+# Linux sysctl.confファイパーサ（設定ファイルパーサ）
 
 このRustプログラムは、`key=value` 形式の設定ファイルを解析する簡単なパーサです。設定ファイルを読み込み、各行を処理して、JSON形式で結果を出力します。
 
@@ -55,12 +55,10 @@ cargo run
 
 - 指定されたファイルを読み込み、各行を解析してネストされたマップに変換します。
 
----
-
-### 例
+## 例
 
 以下の設定ファイル `config/sysctl.conf`:
-
+### 入力例
 ```bash
 # システム設定
 kernel.hostname=myserver
@@ -69,7 +67,7 @@ net.ipv4.ip_forward=1
 ```
 
 この設定ファイルを読み込むと、以下のようにJSON形式で出力されます：
-
+### 出力例
 ```json
 {
   "kernel": {
