@@ -62,7 +62,17 @@ fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json
     //     }
     // }
 
-    // forループからfilter_mapに変更
+    // forループからmap_whileに変更
+    // reader
+    //     .lines()
+    //     .map_while(Result::ok) // 成功した行だけを処理し、エラーが出たら処理を終了
+    //     .filter_map(|line| parse_line(&line)) // パースできた行だけを処理
+    //     .for_each(|(key, value)| {
+    //         let keys: Vec<&str> = key.split('.').collect();
+    //         set_nested_map(&mut config, &keys, serde_json::Value::String(value));
+    //     });
+
+    // map_whileからfilter_map, inspectに変更、エラーが出たら処理を終了したくないのでfilter_map(Result::ok)を使用、inspect を使って、エラーがあった時にその情報を出力しつつ、処理を進める。
     reader
         .lines() // Result<String, io::Error> を返す
         .inspect(|line| {
