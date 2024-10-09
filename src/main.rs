@@ -65,37 +65,54 @@ fn insert_nested_key(map: &mut Map<String, Value>, key: &str, value: &str) {
 }
 
 // ディレクトリ内の全ての.confファイルを再帰的に読み込む関数
-fn parse_all_sysctl_files(directory_path: &str) -> io::Result<Map<String, Value>> {
-    let mut combined_map: Map<String, Value> = Map::new();
-
-    // ディレクトリ内のすべてのファイルを再帰的に処理
-    fn read_dir_recursive(dir: &Path, combined_map: &mut Map<String, Value>) -> io::Result<()> {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-
-            // ファイルの場合、.confファイルのみを処理
-            if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("conf") {
-                let conf_map = parse_sysctl_conf(&path)?;
-                combined_map.extend(conf_map);
-            }
-            // ディレクトリの場合、再帰的に処理
-            else if path.is_dir() {
-                read_dir_recursive(&path, combined_map)?;
-            }
+fn parse_all_sysctl_files(directories: &[&str]) -> io::Result<()> {
+    for directory_path in directories {
+        let base_path = Path::new(directory_path);
+        if base_path.exists() {
+            read_dir_recursive(base_path)?;
         }
-        Ok(())
     }
 
-    let base_path = Path::new(directory_path);
-    read_dir_recursive(base_path, &mut combined_map)?;
+    Ok(())
+}
 
-    Ok(combined_map)
+fn read_dir_recursive(dir: &Path) -> io::Result<()> {
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        // ファイルの場合、.confファイルのみを処理
+        if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("conf") {
+            // ファイルを解析し、マップに変換
+            let conf_map = parse_sysctl_conf(&path)?;
+
+            // ファイル名を出力
+            println!("\nFile: {}", path.display());
+
+            // JSON形式で表示
+            println!("{}", serde_json::to_string_pretty(&conf_map).unwrap());
+        }
+        // ディレクトリの場合、再帰的に処理
+        else if path.is_dir() {
+            read_dir_recursive(&path)?;
+        }
+    }
+    Ok(())
 }
 
 fn main() -> io::Result<()> {
-    // configディレクトリ内のすべての.confファイルを再帰的に読み込む
-    let config = parse_all_sysctl_files("config")?;
-    println!("{}", serde_json::to_string_pretty(&config).unwrap());
+    // ホームディレクトリの仮ディレクトリで実行
+    let directories = [
+        "config/etc/sysctl.d",
+        "config/run/sysctl.d",
+        "config/usr/local/lib/sysctl.d",
+        "config/usr/lib/sysctl.d",
+        "config/lib/sysctl.d",
+        "config/etc",
+    ];
+
+    // ファイルごとにJSONを表示
+    parse_all_sysctl_files(&directories)?;
+
     Ok(())
 }
