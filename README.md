@@ -116,7 +116,7 @@ let directories = [
 
 #### `parse_sysctl_conf(file_path: &Path) -> io::Result<Map<String, Value>>`
 
-- 指定されたファイルを読み込み、各行を解析して辞書型に格納します。行の先頭に `-` がある場合、その行で発生したエラーは無視されます。
+- 指定されたファイルを読み込み、各行を解析してMapに格納します。行の先頭に `-` がある場合、その行で発生したエラーは無視されます。
 
 #### `insert_nested_key(map: &mut Map<String, Value>, key: &str, value: &str)`
 
