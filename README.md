@@ -1,4 +1,5 @@
-# Linux sysctl.conf パーサ (設定ファイルパーサ)
+# Linux sysctl.confパーサ (設定ファイルパーサ)
+![CleanShot 2024-10-09 at 20 53 41](https://github.com/user-attachments/assets/90b905e7-4cf7-4791-bba2-772f52cae470)
 
 このRustプログラムは、`sysctl.conf` 形式に準拠した設定ファイルを解析し、ネストされたキーと値のペアを辞書型に格納してJSON形式で出力するパーサです。
 
@@ -12,7 +13,7 @@
 
 ## ディレクトリ構成の準備
 
-本プログラムを実行するには、以下のようなディレクトリ構造を作成し、`.conf`ファイルを配置してください：
+本プログラムを実行するには、以下のようなディレクトリ構造を作成し、`.conf`ファイルを配置してください。
 
 ```
 config/
@@ -37,7 +38,7 @@ config/
 
 ### 1. 設定ファイルのフォーマット
 
-設定ファイルは以下の形式で記述されます：
+設定ファイルは以下の形式で記述されます
 
 ```bash
 # コメント行
@@ -54,13 +55,13 @@ key3.subkey1.subkey2=value3
 
 ### 2. プログラムの実行
 
-このプログラムは指定されたディレクトリ内の設定ファイルを再帰的に読み込み、各ファイルごとにその内容をJSON形式で標準出力に出力します。以下のコマンドで実行します：
+このプログラムは指定されたディレクトリ内の設定ファイルを再帰的に読み込み、各ファイルごとにその内容をJSON形式で標準出力に出力します。以下のコマンドで実行します。
 
 ```bash
 cargo run
 ```
 
-実行すると、指定した `config` ディレクトリに存在するすべての`.conf`ファイルを処理し、各ファイルごとに以下のような形式で出力します：
+実行すると、指定した `config` ディレクトリに存在するすべての`.conf`ファイルを処理し、各ファイルごとに以下のような形式で出力します。
 
 ```
 File: config/etc/sysctl.d/99-example.conf
@@ -113,15 +114,15 @@ let directories = [
 
 ## 関数の説明
 
-### `parse_sysctl_conf(file_path: &Path) -> io::Result<Map<String, Value>>`
+#### `parse_sysctl_conf(file_path: &Path) -> io::Result<Map<String, Value>>`
 
 - 指定されたファイルを読み込み、各行を解析して辞書型に格納します。行の先頭に `-` がある場合、その行で発生したエラーは無視されます。
 
-### `insert_nested_key(map: &mut Map<String, Value>, key: &str, value: &str)`
+#### `insert_nested_key(map: &mut Map<String, Value>, key: &str, value: &str)`
 
 - ドットで区切られたキー（例：`key.subkey.subsubkey=value`）をネストされたJSONオブジェクト形式に変換して `map` に挿入します。
 
-### `parse_all_sysctl_files(directories: &[&str]) -> io::Result<()>`
+#### `parse_all_sysctl_files(directories: &[&str]) -> io::Result<()>`
 
 - 複数のディレクトリを再帰的に探索し、すべての `.conf` ファイルを解析して内容をJSON形式で出力します。
 
@@ -129,39 +130,37 @@ let directories = [
 
 ### 入力例 1
 
-`以下の設定ファイル `config/sysctl.conf`
+config/example1.conf
 
 ```bash
-# システム設定
-kernel.hostname=myserver
-kernel.max_files=10000
-net.ipv4.ip_forward=1
+endpoint = localhost:3000
+debug = true
+log.file = /var/log/console.log
 ```
 
 ### 出力例 1
 
-この設定ファイルを読み込むと、次のようにJSON形式で出力されます
+この設定ファイルを読み込むと、次のようにJSON形式で出力されます。
 
 ```json
 {
-  "kernel": {
-    "hostname": "myserver",
-    "max_files": "10000"
-  },
-  "net": {
-    "ipv4": {
-      "ip_forward": "1"
-    }
+  "endpoint": "localhost:3000",
+  "debug": "true",
+  "log": {
+    "file": "/var/log/console.log"
   }
 }
 ```
 
 ### 入力例 2
 
+config/example2.conf
+
 ```bash
-# システム設定
--kernel.hostname=myserver
-kernel.max_files=10000
+endpoint = localhost:3000
+# debug = true
+log.file = /var/log/console.log
+log.name = default.log
 ```
 
 ### 出力例 2
@@ -170,8 +169,81 @@ kernel.max_files=10000
 
 ```json
 {
-  "kernel": {
-    "max_files": "10000"
+  "endpoint": "localhost:3000",
+  "log": {
+    "file": "/var/log/console.log",
+    "name": "default.log",
   }
 }
+```
+
+# Linux sysctl.confパーサ (Map形式, JSON形式出力Ver.)
+![CleanShot 2024-10-09 at 22 00 02](https://github.com/user-attachments/assets/2f3e0561-4975-41bc-8627-38f2c1e19408)
+
+リポジトリ(dev3ブランチ)↓
+\
+https://github.com/eternaleight/rust-projects/tree/dev3
+
+## 例
+
+### 入力例 1
+
+config/example1.conf
+
+```bash
+endpoint = localhost:3000
+debug = true
+log.file = /var/log/console.log
+```
+
+### 出力例 1
+
+この設定ファイルを読み込むと、次のようにMap形式, JSON形式で出力されます
+
+```bash
+File: config/example1.conf
+
+{"debug": String("true"), "endpoint": String("localhost:3000"), "log": Object {"file": String("/var/log/console.log")}}
+Map
+
+{
+  "debug": "true",
+  "endpoint": "localhost:3000",
+  "log": {
+    "file": "/var/log/console.log"
+  }
+}
+JSON
+
+```
+
+### 入力例 2
+
+config/example2.conf
+
+```bash
+endpoint = localhost:3000
+# debug = true
+log.file = /var/log/console.log
+log.name = default.log
+```
+
+### 出力例 2
+
+この設定ファイルを読み込むと、以下のように出力されます。`-` が付いた `kernel.hostname` は、エラーが発生しても無視されます。
+
+```bash
+File: config/example2.conf
+
+{"endpoint": String("localhost:3000"), "log": Object {"file": String("/var/log/console.log"), "name": String("default.log")}}
+Map
+
+{
+  "endpoint": "localhost:3000",
+  "log": {
+    "file": "/var/log/console.log",
+    "name": "default.log"
+  }
+}
+JSON
 ```
