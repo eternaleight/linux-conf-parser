@@ -1,8 +1,9 @@
 use serde_json::Map;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, BufRead};
 use std::path::Path;
 
+// トリム関数
 fn trim(s: &str) -> String {
     s.trim().to_string()
 }
@@ -38,12 +39,12 @@ fn parse_line(line: &str) -> Option<(String, String, bool)> {
     None
 }
 
-// ネストされたキーに対応する関数
+// ネストされたキーに対応する関数（マージを考慮）
 fn set_nested_map(
     map: &mut Map<String, serde_json::Value>,
     keys: &[&str],
     value: serde_json::Value,
-    ignore_error: bool,
+    _ignore_error: bool, // ignore_errorは現在使っていないため、プレフィックスを付与
 ) -> Result<(), &'static str> {
     let mut current = map;
 
@@ -55,57 +56,40 @@ fn set_nested_map(
             .ok_or("Failed to set nested map")?;
     }
 
-    // 値の挿入
-    if current
-        .insert(keys[keys.len() - 1].to_string(), value)
-        .is_none()
-    {
-        Ok(())
-    } else if ignore_error {
-        eprintln!("Ignoring error for key: {:?}", keys);
-        return Ok(());
-    } else {
-        return Err("Failed to insert key-value pair");
+    let last_key = keys[keys.len() - 1].to_string();
+
+    match current.get_mut(&last_key) {
+        Some(existing_value) if existing_value.is_object() && value.is_object() => {
+            // 両方がオブジェクトの場合はマージ
+            let existing_map = existing_value.as_object_mut().unwrap();
+            let new_map = value.as_object().unwrap();
+            for (k, v) in new_map {
+                existing_map.insert(k.clone(), v.clone());
+            }
+            println!("Merged object for key: {:?}", last_key); // デバッグ用
+        }
+        _ => {
+            // 上書きを防止するために、すでに値が存在する場合はスキップ
+            if current.contains_key(&last_key) {
+                println!("Key already exists, skipping: {:?}", last_key);
+            } else {
+                current.insert(last_key.clone(), value);
+                println!("Set key: {:?} with value: {:?}", last_key, current.get(&last_key)); // デバッグ用
+            }
+        }
     }
+
+    Ok(())
 }
 
 // 設定ファイルをパースする関数
-fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json::Value>> {
-    let path = Path::new(filename);
-    let file = File::open(&path)?;
+fn parse_config(filename: &Path) -> io::Result<serde_json::Map<String, serde_json::Value>> {
+    println!("Parsing file: {:?}", filename); // ファイル名を出力
+    let file = File::open(filename)?;
     let reader = io::BufReader::new(file);
 
     let mut config: Map<String, serde_json::Value> = Map::new();
-    // let mut config: HashMap<String, serde_json::Value> = HashMap::new();
 
-    // forループ
-    // for line in reader.lines() {
-    //     if let Ok(line) = line {
-    //         if let Some((key, value)) = parse_line(&line) {
-    //             let keys: Vec<&str> = key.split('.').collect();
-    //             set_nested_map(&mut config, &keys, serde_json::Value::String(value));
-    //         }
-    //     }
-    // }
-
-    // forループからmap_whileに変更
-    // システム全体の一貫性やクリティカルな設定が重要な場合（サービスなどでこの処理がシステム全体に深刻な影響を与える場合はエラーが発生したら止める）
-    // reader
-    //     .lines()
-    //     .inspect(|result| {
-    //         if let Err(ref e) = result {
-    //             eprintln!("Error reading line: {}", e); // エラーメッセージをログに出力
-    //         }
-    //     })
-    //     .map_while(Result::ok) // 成功した行だけを処理し、エラーが出たら処理を終了
-    //     .filter_map(|line| parse_line(&line)) // パースできた行だけを処理
-    //     .for_each(|(key, value)| {
-    //         let keys: Vec<&str> = key.split('.').collect();
-    //         set_nested_map(&mut config, &keys, serde_json::Value::String(value));
-    //     });
-
-    // map_whileからfilter_map, inspectに変更、エラーが出たら処理を終了したくないのでfilter_map(Result::ok)を使用、inspect を使って、エラーがあった時にその情報を出力しつつ、処理を進める。
-    // 辞書型・Map等に格納するプログラムという使い方に関して、まずは、ファイルの柔軟な動作や非クリティカルな設定が重要だと思うので、エラーが発生しても処理を続ける選択をしました。
     reader
         .lines()
         .inspect(|result| {
@@ -114,10 +98,11 @@ fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json
             }
         })
         .filter_map(Result::ok)
+        .inspect(|line| println!("Parsing line: {}", line)) // 行を出力してデバッグ
         .filter_map(|line| parse_line(&line)) // ここで ignore_error を取得
         .for_each(|(key, value, ignore_error)| {
             let keys: Vec<&str> = key.split('.').collect();
-            // set_nested_mapを呼び出す際にignore_errorを追加
+            println!("Setting key: {:?} with value: {}", keys, value); // キーと値を出力
             if let Err(e) = set_nested_map(
                 &mut config,
                 &keys,
@@ -133,9 +118,49 @@ fn parse_config(filename: &str) -> io::Result<serde_json::Map<String, serde_json
     Ok(config)
 }
 
-fn main() -> io::Result<()> {
-    let config = parse_config("config/sysctl.conf")?;
+// 複数の設定ファイルをパースして統合する関数
+fn parse_multiple_configs(
+    paths: &[&str],
+) -> io::Result<serde_json::Map<String, serde_json::Value>> {
+    let mut final_config: Map<String, serde_json::Value> = Map::new();
 
+    for path in paths {
+        let path = Path::new(path);
+        if path.is_dir() {
+            // ディレクトリ内の *.conf ファイルをすべて処理
+            for entry in fs::read_dir(path)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("conf") {
+                    let config = parse_config(&path)?;
+                    final_config.extend(config);
+                }
+            }
+        } else if path.is_file() {
+            // 単一ファイルを処理
+            let config = parse_config(path)?;
+            final_config.extend(config);
+        }
+    }
+
+    Ok(final_config)
+}
+
+fn main() -> io::Result<()> {
+    // sysctl.confファイルが格納されているディレクトリ
+    let paths = vec![
+        "config/sysctl.d/",
+        "config/run/sysctl.d/",
+        "config/usr/local/lib/sysctl.d/",
+        "config/usr/lib/sysctl.d/system.conf",
+        "config/lib/sysctl.d/",
+        "config/sysctl.conf",
+    ];
+
+    // 指定したすべてのファイル・ディレクトリをパースして統合
+    let config = parse_multiple_configs(&paths)?;
+
+    // 結果をJSON形式で出力
     println!("{}", serde_json::to_string_pretty(&config).unwrap());
 
     Ok(())
