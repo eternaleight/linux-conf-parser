@@ -33,14 +33,10 @@ fn parse_sysctl_conf(file_path: &str) -> io::Result<Map<String, Value>> {
             let key = key.trim();
             let value = value.trim();
 
-            // 値が4096文字を超える場合はエラー
+            // 値が4096文字を超える場合は常にエラー
             if value.len() > 4096 {
-                if ignore_errors {
-                    continue; // エラー無視設定の場合はスキップ
-                } else {
-                    eprintln!("値が4096文字を超えています: {}", value);
-                    return Err(io::Error::new(io::ErrorKind::InvalidData, "値が長すぎます"));
-                }
+                eprintln!("値が4096文字を超えています: {}", value);
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "値が長すぎます"));
             }
 
             insert_nested_key(&mut map, key, value);
