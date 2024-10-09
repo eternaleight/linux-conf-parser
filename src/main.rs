@@ -109,6 +109,7 @@ fn main() -> io::Result<()> {
         "config/usr/lib/sysctl.d",
         "config/lib/sysctl.d",
         "config/etc",
+        "config",
     ];
 
     // ファイルごとにJSONを表示
