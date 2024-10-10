@@ -1,42 +1,43 @@
-use serde_json::{Map, Value};
-use std::fs::{self, File};
+use rustc_hash::FxHashMap;
+use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-// 個々のsysctl.confファイルを解析する関数
-fn parse_sysctl_conf(file_path: &Path) -> io::Result<Map<String, Value>> {
-    let file = File::open(file_path)?;
+const MAX_VALUE_LENGTH: usize = 4096;
+
+/// 設定ファイルをパースし、結果をFxHashMapに格納
+fn parse_sysctl_conf(file_path: &Path) -> io::Result<FxHashMap<String, FxHashMap<String, String>>> {
+    let file = fs::File::open(file_path)?;
     let reader = io::BufReader::new(file);
 
-    let mut map: Map<String, Value> = Map::new();
+    let mut map = FxHashMap::default();
 
     for line in reader.lines() {
         let line = line?;
-        let trimmed_line = line.trim();
+        let trimmed = line.trim();
 
-        // コメント行や空行を無視
-        if trimmed_line.is_empty() || trimmed_line.starts_with('#') || trimmed_line.starts_with(';')
-        {
+        // 空行とコメント行を無視
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
             continue;
         }
 
-        // 行が'-'で始まる場合はエラーを無視
-        let ignore_errors = trimmed_line.starts_with('-');
-        let processed_line = if ignore_errors {
-            &trimmed_line[1..].trim()
-        } else {
-            trimmed_line
-        };
+        // エラーハンドリングを無視する行（'-'で始まる行）
+        let ignore_error = trimmed.starts_with('-');
 
-        // key=value形式を処理
-        if let Some((key, value)) = processed_line.split_once('=') {
+        // '='で分割してキーと値を抽出
+        if let Some((key, value)) = trimmed.split_once('=') {
             let key = key.trim();
             let value = value.trim();
 
-            // 値が4096文字を超える場合はエラー
-            if value.len() > 4096 {
-                eprintln!("値が4096文字を超えています: {}", value);
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "値が長すぎます"));
+            // 値が4096文字を超えた場合の警告
+            if value.len() > MAX_VALUE_LENGTH {
+                eprintln!("Warning: The value for key '{}' exceeds 4096 characters and will be truncated.", key);
+                continue; // 長すぎる値は無視する
+            }
+
+            if ignore_error {
+                println!("Warning: Ignoring error for setting '{}'", key);
+                continue;
             }
 
             insert_nested_key(&mut map, key, value);
@@ -46,62 +47,68 @@ fn parse_sysctl_conf(file_path: &Path) -> io::Result<Map<String, Value>> {
     Ok(map)
 }
 
-// ネストされたキーをMapに挿入する関数
-fn insert_nested_key(map: &mut Map<String, Value>, key: &str, value: &str) {
-    let keys: Vec<&str> = key.split('.').collect();
-    let mut current_map = map;
+/// ネストされたキーをFxHashMapに挿入
+fn insert_nested_key(
+    map: &mut FxHashMap<String, FxHashMap<String, String>>,
+    key: &str,
+    value: &str,
+) {
+    let mut keys = key.split('.').collect::<Vec<&str>>();
 
-    for (i, part) in keys.iter().enumerate() {
-        if i == keys.len() - 1 {
-            current_map.insert(part.to_string(), Value::String(value.to_string()));
-        } else {
-            current_map = current_map
-                .entry(part.to_string())
-                .or_insert_with(|| Value::Object(Map::new()))
-                .as_object_mut()
-                .unwrap();
-        }
+    if keys.len() == 1 {
+        // ドットで区切られていない場合、単純なキーを挿入
+        map.entry(key.to_string())
+            .or_default()
+            .insert(key.to_string(), value.to_string());
+    } else {
+        // ドットで区切られている場合、ネストされたマップを生成
+        let first_key = keys.remove(0).to_string();
+        let last_key = keys.pop().unwrap().to_string();
+
+        let sub_map: &mut FxHashMap<String, String> = map.entry(first_key).or_default();
+        sub_map.insert(last_key, value.to_string());
     }
 }
 
-// ディレクトリ内の全ての.confファイルを再帰的に読み込む関数
+/// FxHashMapの内容を出力
+fn display_map(map: &FxHashMap<String, FxHashMap<String, String>>) {
+    for (key, sub_map) in map {
+        println!("{}", key);
+        for (sub_key, value) in sub_map {
+            println!("  {} {}", sub_key, value); // = や : なしで出力
+        }
+        println!(); //最後だけ改行
+    }
+}
+
+/// 再帰的に指定されたディレクトリ内のすべての.confファイルをパース
 fn parse_all_sysctl_files(directories: &[&str]) -> io::Result<()> {
-    for directory_path in directories {
-        let base_path = Path::new(directory_path);
-        if base_path.exists() {
-            read_dir_recursive(base_path)?;
-        }
-    }
+    for dir in directories {
+        let path = Path::new(dir);
+        if path.is_dir() {
+            // ディレクトリ内の.confファイルを再帰的に探索
+            for entry in fs::read_dir(path)? {
+                let entry = entry?;
+                let path = entry.path();
 
-    Ok(())
-}
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("conf") {
+                    println!("File: {:?}", path);
+                    let config_map = parse_sysctl_conf(&path)?;
 
-fn read_dir_recursive(dir: &Path) -> io::Result<()> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        // ファイルの場合、.confファイルのみを処理
-        if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("conf") {
-            // ファイルを解析し、マップに変換
-            let conf_map = parse_sysctl_conf(&path)?;
-
-            // ファイル名を出力
-            println!("\nFile: {}", path.display());
-
-            // JSON形式で表示
-            println!("{}", serde_json::to_string_pretty(&conf_map).unwrap());
-        }
-        // ディレクトリの場合、再帰的に処理
-        else if path.is_dir() {
-            read_dir_recursive(&path)?;
+                    // ファイルごとにFxHashMapの内容をそのまま表示
+                    display_map(&config_map);
+                } else if path.is_dir() {
+                    // サブディレクトリを再帰的に探索
+                    parse_all_sysctl_files(&[path.to_str().unwrap()])?;
+                }
+            }
         }
     }
     Ok(())
 }
 
 fn main() -> io::Result<()> {
-    // ホームディレクトリの仮ディレクトリで実行
+    // 再帰的に探索するディレクトリ
     let directories = [
         "config/etc/sysctl.d",
         "config/run/sysctl.d",
@@ -112,7 +119,7 @@ fn main() -> io::Result<()> {
         "config",
     ];
 
-    // ファイルごとにJSONを表示
+    // 全ディレクトリの.confファイルをパース
     parse_all_sysctl_files(&directories)?;
 
     Ok(())
