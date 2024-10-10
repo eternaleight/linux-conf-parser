@@ -195,6 +195,156 @@ log
 ```
 
 
+
+## テスト仕様と使い方
+![CleanShot 2024-10-10 at 22 38 57](https://github.com/user-attachments/assets/34e50125-253a-4674-84f1-18268459fef9)
+
+このプログラムには、複数のテストが用意されています。各テストでは、`sysctl.conf`形式の設定ファイルを解析し、特定のケースに対応した動作を確認しています。テストは、特定のエラーハンドリングやファイルの正しい解析が行われているかを確認するためのものです。
+
+### テストの実行方法
+
+1. **`cargo test` コマンドを使用**  
+   テストは `cargo test` コマンドで実行します。テスト用に定義された関数が順次実行され、結果が表示されます。
+
+   ```bash
+   cargo test
+   ```
+
+2. **各テストの動作**  
+   テスト関数は、設定ファイルの内容に応じて、エラー処理や正常処理をテストします。以下で、各テストケースの概要を説明します。
+
+
+### 1. `test_non_existent_file`
+
+- **概要**: 存在しないファイルを開こうとした場合のエラーハンドリングを確認します。
+- **期待結果**: 存在しないファイルにアクセスすると、`std::io::ErrorKind::NotFound` エラーが返されることを確認します。
+
+```rust
+#[test]
+fn test_non_existent_file() {
+    let file_path = Path::new("non_existent.conf");
+    let result = parse_sysctl_conf(file_path);
+    assert!(result.is_err());
+    if let Err(e) = result {
+        assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
+    }
+}
+```
+
+
+
+### 2. `test_value_too_long`
+
+- **概要**: 設定ファイルの値が4096文字を超えた場合に、パニックが発生することを確認します。
+- **期待結果**: `should_panic` 属性によって、値が長すぎる際にプログラムがパニックすることを確認します。
+
+```rust
+#[test]
+#[should_panic(expected = "値が4096文字を超えています")]
+fn test_value_too_long() {
+    let long_value = "A".repeat(MAX_VALUE_LENGTH + 1);
+    let content = format!("long.key = {}", long_value);
+    let file_path = setup_test_file("long_value.conf", &content);
+
+    let result = parse_sysctl_conf(&file_path);
+    assert!(result.is_err());
+
+    if let Err(e) = result {
+        assert_eq!(e.kind(), std::io::ErrorKind::InvalidData);
+    }
+}
+```
+
+
+
+### 3. `test_valid_conf_file`
+
+- **概要**: 正常な設定ファイルを読み込み、内容が正しくパースされているかを確認します。
+- **期待結果**: 設定ファイル内のキーと値が正しく `FxHashMap` に格納されていることを確認します。
+
+```rust
+#[test]
+fn test_valid_conf_file() {
+    let content = "net.ipv4.tcp_syncookies = 1\nfs.file-max = 2097152";
+    let file_path = setup_test_file("valid.conf", content);
+
+    let result = parse_sysctl_conf(&file_path);
+    assert!(result.is_ok(), "設定ファイルのパースに失敗しました");
+
+    let map = result.unwrap();
+    println!("{:?}", map);
+
+    assert_eq!(
+        map.get("net")
+            .expect("net が存在しません")
+            .get("tcp_syncookies")
+            .expect("tcp_syncookies が存在しません"),
+        "1"
+    );
+    assert_eq!(
+        map.get("fs")
+            .expect("fs が存在しません")
+            .get("file-max")
+            .expect("file-max が存在しません"),
+        "2097152"
+    );
+}
+```
+
+
+
+### 4. `test_parse_all_sysctl_files`
+
+- **概要**: 複数のファイルがあるディレクトリを再帰的に読み込み、すべての設定ファイルを正しく解析できるかを確認します。
+- **期待結果**: 再帰的なファイルの読み込みが成功し、すべてのキーと値が正しくパースされることを確認します。
+
+```rust
+#[test]
+fn test_parse_all_sysctl_files() {
+    let content1 = "net.ipv4.tcp_syncookies = 1";
+    let content2 = "fs.file-max = 2097152";
+
+    let _ = setup_test_file("dir1/test1.conf", content1);
+    let _ = setup_test_file("dir1/subdir/test2.conf", content2);
+
+    let directories = ["test_data/dir1"];
+    let result = parse_all_sysctl_files(&directories);
+
+    assert!(result.is_ok());
+
+    // テスト後にクリーンアップ
+    cleanup_test_files();
+}
+```
+
+
+
+## テスト関数の使い方
+
+- 各テスト関数は特定のシナリオに対して正しく動作するかを検証します。
+- テスト実行後に一時的に作成されたファイルやディレクトリは、`cleanup_test_files` 関数を呼び出してクリーンアップします。
+
+## テスト結果の確認方法
+
+テストを実行すると、各テストケースが順番に実行されます。テストが成功すると "ok" が表示され、失敗するとエラーメッセージが表示されます。例えば、以下のような出力が得られます：
+
+```bash
+running 4 tests
+test test_non_existent_file ... ok
+test test_valid_conf_file ... ok
+test test_value_too_long ... ok
+test test_parse_all_sysctl_files ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+各テストが成功すれば問題なく動作しています。
+
+
+
+
+
+
 # Linux sysctl.confパーサ (Map形式, JSON形式出力Ver.)
 ![CleanShot 2024-10-09 at 22 00 02](https://github.com/user-attachments/assets/2f3e0561-4975-41bc-8627-38f2c1e19408)
 
