@@ -19,3 +19,25 @@ fn main() -> io::Result<()> {
 
     Ok(())
 }
+
+// 本番システム用
+// mod parser;
+// mod utils;
+
+// use std::io;
+
+// fn main() -> io::Result<()> {
+//     // 再帰的に探索するディレクトリ
+//     let directories = [
+//         "/etc/sysctl.d",
+//         "/run/sysctl.d",
+//         "/usr/local/lib/sysctl.d",
+//         "/usr/lib/sysctl.d",
+//         "/lib/sysctl.d",
+//         "/etc",
+//     ];
+
+//     parser::parse_all_sysctl_files(&directories)?;
+
+//     Ok(())
+// }
