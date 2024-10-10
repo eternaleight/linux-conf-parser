@@ -38,6 +38,7 @@ fn test_non_existent_file() {
 
 /// 4096文字を超える値が含まれている場合のエラーテスト
 #[test]
+#[should_panic(expected = "値が4096文字を超えています")]
 fn test_value_too_long() {
     let long_value = "A".repeat(MAX_VALUE_LENGTH + 1);
     let content = format!("long.key = {}", long_value);
