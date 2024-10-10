@@ -58,14 +58,14 @@ fn insert_nested_key(
     if keys.len() == 1 {
         // ドットで区切られていない場合、単純なキーを挿入
         map.entry(key.to_string())
-            .or_insert(FxHashMap::default())
+            .or_default()
             .insert(key.to_string(), value.to_string());
     } else {
         // ドットで区切られている場合、ネストされたマップを生成
         let first_key = keys.remove(0).to_string();
         let last_key = keys.pop().unwrap().to_string();
 
-        let sub_map = map.entry(first_key).or_insert(FxHashMap::default());
+        let sub_map: &mut FxHashMap<String, String> = map.entry(first_key).or_default();
         sub_map.insert(last_key, value.to_string());
     }
 }
@@ -77,7 +77,7 @@ fn display_map(map: &FxHashMap<String, FxHashMap<String, String>>) {
         for (sub_key, value) in sub_map {
             println!("  {} {}", sub_key, value); // = や : なしで出力
         }
-            println!(); //最後だけ改行
+        println!(); //最後だけ改行
     }
 }
 
