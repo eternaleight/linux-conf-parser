@@ -38,20 +38,17 @@ pub fn parse_sysctl_conf(
             continue;
         }
 
-        // エラーハンドリングを無視する行（'-'で始まる行）
-        let ignore_error = trimmed.starts_with('-');
-
         // '='で分割してキーと値を抽出
         if let Some((key, value)) = trimmed.split_once('=') {
             let key = key.trim();
             let value = value.trim();
 
-            // 値が4096文字を超えた場合はエラーを出力してパニック
+            // 値が4096文字を超えた場合はパニック
             if value.len() > MAX_VALUE_LENGTH {
                 panic!("Error: キー '{}' の値が4096文字を超えています。👀", key);
             }
 
-            if ignore_error {
+            if trimmed.starts_with('-') {
                 println!("Warning: 設定 '{}' のエラーを無視します。", key);
                 continue;
             }
@@ -80,9 +77,9 @@ pub fn insert_nested_key(
         // ドットで区切られている場合、ネストされたマップを生成
         let first_key = keys.remove(0).to_string();
         let last_key = keys.pop().unwrap().to_string();
-
-        let sub_map: &mut FxHashMap<String, String> = map.entry(first_key).or_default();
-        sub_map.insert(last_key, value.to_string());
+        map.entry(first_key)
+            .or_default()
+            .insert(last_key, value.to_string());
     }
 }
 
@@ -90,46 +87,43 @@ pub fn insert_nested_key(
 pub fn parse_all_sysctl_files(directories: &[&str]) -> io::Result<()> {
     for dir in directories {
         let path = Path::new(dir);
-        if path.is_dir() {
-            // ディレクトリ内の.confファイルを再帰的に探索
-            for entry in fs::read_dir(path).map_err(|e| {
-                eprintln!(
-                    "Error: ディレクトリ '{}' の読み込みに失敗しました: {}",
-                    path.display(),
-                    e
-                );
-                e
-            })? {
-                let entry = entry.map_err(|e| {
-                    eprintln!(
-                        "Error: ディレクトリ内のエントリへのアクセスに失敗しました: {}",
-                        e
-                    );
-                    e
-                })?;
-                let path = entry.path();
-
-                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("conf") {
-                    println!("File: {:?}", path);
-                    let config_map = parse_sysctl_conf(&path)?;
-                    display_map(&config_map);
-                } else if path.is_dir() {
-                    // サブディレクトリを再帰的に探索
-                    parse_all_sysctl_files(&[path.to_str().unwrap()]).map_err(|e| {
-                        eprintln!(
-                            "Error: サブディレクトリ '{}' の読み込みに失敗しました: {}",
-                            path.display(),
-                            e
-                        );
-                        e
-                    })?;
-                }
-            }
-        } else {
+        if !path.is_dir() {
             eprintln!(
                 "Error: 指定されたディレクトリ '{}' が存在しません。",
                 path.display()
             );
+            continue;
+        }
+        parse_sysctl_dir(path)?;
+    }
+    Ok(())
+}
+
+/// 再帰的にディレクトリ内の.confファイルを探索してパース
+fn parse_sysctl_dir(path: &Path) -> io::Result<()> {
+    for entry in fs::read_dir(path).map_err(|e| {
+        eprintln!(
+            "Error: ディレクトリ '{}' の読み込みに失敗しました: {}",
+            path.display(),
+            e
+        );
+        e
+    })? {
+        let entry = entry.map_err(|e| {
+            eprintln!(
+                "Error: ディレクトリ内のエントリへのアクセスに失敗しました: {}",
+                e
+            );
+            e
+        })?;
+        let path = entry.path();
+
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("conf") {
+            println!("File: {:?}", path);
+            let config_map = parse_sysctl_conf(&path)?;
+            display_map(&config_map);
+        } else if path.is_dir() {
+            parse_sysctl_dir(&path)?;
         }
     }
     Ok(())

@@ -10,4 +10,3 @@ pub fn display_map(map: &FxHashMap<String, FxHashMap<String, String>>) {
         println!();
     }
 }
-
