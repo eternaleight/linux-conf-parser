@@ -125,7 +125,10 @@ cargo run
 プログラムが `long_value_test.conf` を読み込むと、4096文字を超える値が検出されるため、エラーメッセージが表示されます。出力は以下のようになります。
 
 ```sh
+File: "config/long_value_test.conf"
+thread 'main' panicked at src/main.rs:35:17:
 Error: キー 'value.too.long' の値が4096文字を超えています。👀
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 ```
 
 プログラムはこのエラーを検知すると、適切に終了します。これにより、長すぎる値が設定ファイルに含まれている場合、プログラムが異常な挙動を防ぎ、適切にエラーメッセージを出力して終了することを確認できます。
