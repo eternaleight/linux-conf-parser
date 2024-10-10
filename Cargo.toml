@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 rustc-hash = "2.0.0"
+
+[lib]
+path = "src/lib.rs"
