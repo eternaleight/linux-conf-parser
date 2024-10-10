@@ -3,7 +3,7 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-const MAX_VALUE_LENGTH: usize = 4096; // 値の最大長を4096に設定
+const MAX_VALUE_LENGTH: usize = 4096;
 
 /// 設定ファイルをパースし、結果をFxHashMapに格納
 fn parse_sysctl_conf(file_path: &Path) -> io::Result<FxHashMap<String, FxHashMap<String, String>>> {
@@ -70,6 +70,17 @@ fn insert_nested_key(
     }
 }
 
+/// FxHashMapの内容を出力
+fn display_map(map: &FxHashMap<String, FxHashMap<String, String>>) {
+    for (key, sub_map) in map {
+        println!("{}", key);
+        for (sub_key, value) in sub_map {
+            println!("  {} {}", sub_key, value); // = や : なしで出力
+        }
+            println!(); //最後だけ改行
+    }
+}
+
 /// 再帰的に指定されたディレクトリ内のすべての.confファイルをパース
 fn parse_all_sysctl_files(directories: &[&str]) -> io::Result<()> {
     for dir in directories {
@@ -81,16 +92,11 @@ fn parse_all_sysctl_files(directories: &[&str]) -> io::Result<()> {
                 let path = entry.path();
 
                 if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("conf") {
-                    println!("\nFile: {:?}", path);
+                    println!("File: {:?}", path);
                     let config_map = parse_sysctl_conf(&path)?;
 
-                    // ファイルごとに内容を表示
-                    for (key, sub_map) in config_map {
-                        println!("{}:", key);
-                        for (sub_key, value) in sub_map {
-                            println!("  {} = {}", sub_key, value);
-                        }
-                    }
+                    // ファイルごとにFxHashMapの内容をそのまま表示
+                    display_map(&config_map);
                 } else if path.is_dir() {
                     // サブディレクトリを再帰的に探索
                     parse_all_sysctl_files(&[path.to_str().unwrap()])?;
