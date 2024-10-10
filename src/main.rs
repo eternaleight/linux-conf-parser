@@ -1,3 +1,4 @@
+use core::panic;
 use rustc_hash::FxHashMap;
 use std::fs;
 use std::io::{self, BufRead};
@@ -29,14 +30,13 @@ fn parse_sysctl_conf(file_path: &Path) -> io::Result<FxHashMap<String, FxHashMap
             let key = key.trim();
             let value = value.trim();
 
-            // 値が4096文字を超えた場合の警告
+            // 値が4096文字を超えた場合はエラーメッセージを出力し、即座に終了
             if value.len() > MAX_VALUE_LENGTH {
-                eprintln!("Warning: The value for key '{}' exceeds 4096 characters and will be truncated.", key);
-                continue; // 長すぎる値は無視する
+                panic!("Error: キー '{}' の値が4096文字を超えています。👀", key);
             }
 
             if ignore_error {
-                println!("Warning: Ignoring error for setting '{}'", key);
+                println!("Warning: 設定 '{}' のエラーを無視します。", key);
                 continue;
             }
 
@@ -94,8 +94,6 @@ fn parse_all_sysctl_files(directories: &[&str]) -> io::Result<()> {
                 if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("conf") {
                     println!("File: {:?}", path);
                     let config_map = parse_sysctl_conf(&path)?;
-
-                    // ファイルごとにFxHashMapの内容をそのまま表示
                     display_map(&config_map);
                 } else if path.is_dir() {
                     // サブディレクトリを再帰的に探索
@@ -119,8 +117,10 @@ fn main() -> io::Result<()> {
         "config",
     ];
 
-    // 全ディレクトリの.confファイルをパース
-    parse_all_sysctl_files(&directories)?;
+    // parse_all_sysctl_filesのエラーをキャッチして終了
+    if let Err(e) = parse_all_sysctl_files(&directories) {
+        eprintln!("Error: エラーが発生しました: {}", e);
+    }
 
     Ok(())
 }
