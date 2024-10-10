@@ -83,6 +83,11 @@ fn test_valid_conf_file() {
     );
 }
 
+fn cleanup_test_files() {
+    fs::remove_dir_all("test_data")
+        .unwrap_or_else(|_| println!("テストデータのクリーンアップに失敗しました"));
+}
+
 /// 再帰的なディレクトリ読み込みのテスト
 #[test]
 fn test_parse_all_sysctl_files() {
@@ -98,4 +103,7 @@ fn test_parse_all_sysctl_files() {
     let result = parse_all_sysctl_files(&directories);
 
     assert!(result.is_ok());
+
+    // テスト後にクリーンアップ
+    cleanup_test_files();
 }
