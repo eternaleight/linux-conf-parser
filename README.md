@@ -318,8 +318,8 @@ fn test_non_existent_file() {
 
 ### 2. `test_value_too_long`
 
-- **概要**: 設定ファイルの値が4096文字を超えた場合に、パニックが発生することを確認します。
-- **期待結果**: `should_panic` 属性によって、値が長すぎる際にプログラムがパニックすることを確認します。
+- **概要**: 設定ファイルの値が4096文字を超えた場合に、プログラムがパニックを発生させることを確認します。このテストは、システムの安全性を保持するために、特定の長さを超える設定値に対して厳格な制限を施すことの重要性を強調します。
+- **期待結果**: `should_panic` 属性を使用して、設定値が4096文字を超えるときにプログラムがパニックすることを確認します。このパニックは、設定値が長すぎるために予期せず起こる状態を模倣し、適切なエラー処理とシステムの安全性を保証します。
 
 ```rust
 #[test]
@@ -329,12 +329,8 @@ fn test_value_too_long() {
     let content = format!("long.key = {}", long_value);
     let file_path = setup_test_file("long_value.conf", &content);
 
-    let result = parse_sysctl_conf(&file_path);
-    assert!(result.is_err());
-
-    if let Err(e) = result {
-        assert_eq!(e.kind(), std::io::ErrorKind::InvalidData);
-    }
+    // この関数呼び出しは panic を引き起こすことが期待されている
+    let _ = parse_sysctl_conf(&file_path);
 }
 ```
 
@@ -378,8 +374,8 @@ fn test_valid_conf_file() {
 
 ### 4. `test_parse_all_sysctl_files`
 
-- **概要**: 複数のファイルがあるディレクトリを再帰的に読み込み、すべての設定ファイルを正しく解析できるかを確認します。
-- **期待結果**: 再帰的なファイルの読み込みが成功し、すべてのキーと値が正しくパースされることを確認します。
+- **概要**: 複数のファイルがあるディレクトリを再帰的に読み込み、すべての設定ファイルを正しく解析できるかを確認します。さらに、パースされた内容が期待通りのものであるかを具体的に検証します。
+- **期待結果**: 再帰的なファイルの読み込みが成功し、すべてのキーと値が正しくパースされ、それぞれの設定が期待される値であることを確認します。
 
 ```rust
 #[test]
@@ -387,13 +383,30 @@ fn test_parse_all_sysctl_files() {
     let content1 = "net.ipv4.tcp_syncookies = 1";
     let content2 = "fs.file-max = 2097152";
 
+    // ファイルをセットアップ
     let _ = setup_test_file("dir1/test1.conf", content1);
     let _ = setup_test_file("dir1/subdir/test2.conf", content2);
 
+    // 再帰的にディレクトリを探索してパースする
     let directories = ["test_data/dir1"];
     let result = parse_all_sysctl_files(&directories);
 
-    assert!(result.is_ok());
+    // パースが成功したことを確認
+    assert!(result.is_ok(), "Sysctlファイルのパースに失敗しました");
+
+    if let Ok(map) = result {
+        // 期待するキーと値が存在するか確認
+        assert_eq!(
+            map.get("net").and_then(|m| m.get("tcp_syncookies")),
+            Some(&"1".to_string()),
+            "net.ipv4.tcp_syncookiesの値が期待と異なります"
+        );
+        assert_eq!(
+            map.get("fs").and_then(|m| m.get("file-max")),
+            Some(&"2097152".to_string()),
+            "fs.file-maxの値が期待と異なります"
+        );
+    }
 
     // テスト後にクリーンアップ
     cleanup_test_files();
