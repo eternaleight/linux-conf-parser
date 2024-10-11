@@ -96,7 +96,22 @@ fn test_parse_all_sysctl_files() {
     let directories = ["test_data/dir1"];
     let result = parse_all_sysctl_files(&directories);
 
-    assert!(result.is_ok());
+    // パースが成功したことを確認
+    assert!(result.is_ok(), "Sysctlファイルのパースに失敗しました");
+
+    if let Ok(map) = result {
+        // 期待するキーと値が存在するか確認
+        assert_eq!(
+            map.get("net").and_then(|m| m.get("tcp_syncookies")),
+            Some(&"1".to_string()),
+            "net.ipv4.tcp_syncookiesの値が期待と異なります"
+        );
+        assert_eq!(
+            map.get("fs").and_then(|m| m.get("file-max")),
+            Some(&"2097152".to_string()),
+            "fs.file-maxの値が期待と異なります"
+        );
+    }
 
     // テスト後にクリーンアップ
     cleanup_test_files();

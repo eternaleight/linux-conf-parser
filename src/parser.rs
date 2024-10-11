@@ -85,8 +85,12 @@ pub fn insert_nested_key(
 }
 
 /// 再帰的に指定されたディレクトリ内のすべての.confファイルをパース
-pub fn parse_all_sysctl_files(directories: &[&str]) -> io::Result<()> {
+pub fn parse_all_sysctl_files(
+    directories: &[&str],
+) -> io::Result<FxHashMap<String, FxHashMap<String, String>>> {
     let mut parsed_files = HashSet::new(); // パース済みファイルのセット
+    let mut result_map = FxHashMap::default();
+
     for dir in directories {
         let path = Path::new(dir);
         if !path.is_dir() {
@@ -96,13 +100,18 @@ pub fn parse_all_sysctl_files(directories: &[&str]) -> io::Result<()> {
             );
             continue;
         }
-        parse_sysctl_dir(path, &mut parsed_files)?; // パース済みファイルのセットを渡す
+        parse_sysctl_dir(path, &mut parsed_files, &mut result_map)?; // パース済みファイルのセットを渡す
     }
-    Ok(())
+
+    Ok(result_map)
 }
 
 /// 再帰的にディレクトリ内の.confファイルを探索してパース
-fn parse_sysctl_dir(path: &Path, parsed_files: &mut HashSet<String>) -> io::Result<()> {
+fn parse_sysctl_dir(
+    path: &Path,
+    parsed_files: &mut HashSet<String>,
+    result_map: &mut FxHashMap<String, FxHashMap<String, String>>,
+) -> io::Result<()> {
     for entry in fs::read_dir(path).map_err(|e| {
         eprintln!(
             "Error: ディレクトリ '{}' の読み込みに失敗しました: {}",
@@ -132,10 +141,17 @@ fn parse_sysctl_dir(path: &Path, parsed_files: &mut HashSet<String>) -> io::Resu
             let config_map = parse_sysctl_conf(&path)?;
             display_map(&config_map);
 
+            for (key, value_map) in &config_map {
+                result_map
+                    .entry(key.to_string())
+                    .or_default()
+                    .extend(value_map.clone());
+            }
+
             // パース済みとしてセットに追加
             parsed_files.insert(path_str);
         } else if path.is_dir() {
-            parse_sysctl_dir(&path, parsed_files)?;
+            parse_sysctl_dir(&path, parsed_files, result_map)?;
         }
     }
     Ok(())
