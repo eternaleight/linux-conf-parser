@@ -247,12 +247,13 @@ log.file = /var/log/console.log
 ### 出力例 1
 
 ```bash
-File: config/example1.conf
-
-endpoint localhost:3000
-debug true
+File: "config/example1.conf"
+debug
+  debug true
 log
   file /var/log/console.log
+endpoint
+  endpoint localhost:3000
 ```
 
 ### 入力例 2
@@ -269,12 +270,12 @@ log.name = default.log
 ### 出力例 2
 
 ```bash
-File: config/example2.conf
-
-endpoint localhost:3000
+File: "config/example2.conf"
 log
   file /var/log/console.log
   name default.log
+endpoint
+  endpoint localhost:3000
 ```
 
 

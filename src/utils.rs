@@ -7,6 +7,5 @@ pub fn display_map(map: &FxHashMap<String, FxHashMap<String, String>>) {
         for (sub_key, value) in sub_map {
             println!("  {} {}", sub_key, value);
         }
-        println!();
     }
 }

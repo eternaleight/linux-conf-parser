@@ -139,6 +139,7 @@ fn parse_sysctl_dir(
             println!("File: {:?}", path);
             let config_map = parse_sysctl_conf(&path)?;
             display_map(&config_map);
+            println!();
 
             for (key, value_map) in &config_map {
                 result_map
