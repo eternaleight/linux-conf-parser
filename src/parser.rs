@@ -1,6 +1,5 @@
 use crate::utils::display_map;
-use rustc_hash::FxHashMap;
-use std::collections::HashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
@@ -88,7 +87,7 @@ pub fn insert_nested_key(
 pub fn parse_all_sysctl_files(
     directories: &[&str],
 ) -> io::Result<FxHashMap<String, FxHashMap<String, String>>> {
-    let mut parsed_files = HashSet::new(); // パース済みファイルのセット
+    let mut parsed_files = FxHashSet::default(); // パース済みファイルのセット
     let mut result_map = FxHashMap::default();
 
     for dir in directories {
@@ -109,7 +108,7 @@ pub fn parse_all_sysctl_files(
 /// 再帰的にディレクトリ内の.confファイルを探索してパース
 fn parse_sysctl_dir(
     path: &Path,
-    parsed_files: &mut HashSet<String>,
+    parsed_files: &mut FxHashSet<String>,
     result_map: &mut FxHashMap<String, FxHashMap<String, String>>,
 ) -> io::Result<()> {
     for entry in fs::read_dir(path).map_err(|e| {
