@@ -1,4 +1,4 @@
-use projects::parser::{parse_all_sysctl_files, parse_sysctl_conf, MAX_VALUE_LENGTH};
+use linux_conf_parser::parser::{parse_all_sysctl_files, parse_sysctl_conf, MAX_VALUE_LENGTH};
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
