@@ -1,7 +1,9 @@
-mod parser;
+mod directory_parser;
+mod file_parser;
+mod schema;
 mod utils;
 
-use std::io;
+use std::{io, path::Path};
 
 fn main() -> io::Result<()> {
     // 再帰的に探索するディレクトリ
@@ -15,7 +17,11 @@ fn main() -> io::Result<()> {
         "config",
     ];
 
-    parser::parse_all_sysctl_files(&directories)?;
+    // スキーマファイルを読み込む
+    let schema_path = Path::new("schema.txt");
+    let schema = schema::load_schema(schema_path)?;
+
+    directory_parser::parse_all_sysctl_files(&directories, &schema)?;
 
     Ok(())
 }

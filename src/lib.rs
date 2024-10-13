@@ -1,2 +1,4 @@
-pub mod parser;
+pub mod file_parser;
+pub mod directory_parser;
+pub mod schema;
 pub mod utils;
