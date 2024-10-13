@@ -48,14 +48,23 @@ pub fn validate_against_schema(
     config_map: &FxHashMap<String, String>,
     schema: &FxHashMap<String, String>,
 ) -> Result<(), String> {
+    let mut errors = Vec::new(); // エラーを収集するベクター
+
     for (key, value) in config_map {
         if let Some(expected_type) = schema.get(key) {
             // 値の型を検証
             match expected_type.as_str() {
-                "string" => { /* 基本的にすべての値は文字列として扱われる */ }
+                "string" => {
+                    if value.is_empty() {
+                        errors.push(format!(
+                            "Error: キー '{}' の値 '{}' は空の文字列です。",
+                            key, value
+                        ));
+                    }
+                }
                 "bool" => {
                     if value != "true" && value != "false" {
-                        return Err(format!(
+                        errors.push(format!(
                             "Error: キー '{}' の値 '{}' はブール値ではありません。",
                             key, value
                         ));
@@ -63,22 +72,27 @@ pub fn validate_against_schema(
                 }
                 "int" => {
                     if value.parse::<i64>().is_err() {
-                        return Err(format!(
+                        errors.push(format!(
                             "Error: キー '{}' の値 '{}' は整数ではありません。",
                             key, value
                         ));
                     }
                 }
                 _ => {
-                    return Err(format!(
+                    errors.push(format!(
                         "Error: キー '{}' のスキーマ型 '{}' はサポートされていません。",
                         key, expected_type
-                    ))
+                    ));
                 }
             }
         } else {
-            return Err(format!("Error: キー '{}' はスキーマに存在しません。", key));
+            errors.push(format!("Error: キー '{}' はスキーマに存在しません。", key));
         }
     }
-    Ok(())
+
+    if errors.is_empty() {
+        Ok(()) // エラーがない場合は正常
+    } else {
+        Err(errors.join("\n")) // エラーがある場合はすべてを連結して返す
+    }
 }

@@ -9,9 +9,10 @@ use std::path::Path;
 pub fn parse_all_sysctl_files(
     directories: &[&str],
     schema: &FxHashMap<String, String>,
-) -> io::Result<FxHashMap<String, String>> {
+) -> io::Result<()> {
     let mut parsed_files = FxHashSet::default();
     let mut result_map = FxHashMap::default();
+    let mut all_errors = Vec::new(); // 全てのエラーを収集
 
     for dir in directories {
         let path = Path::new(dir);
@@ -27,10 +28,24 @@ pub fn parse_all_sysctl_files(
 
     // パース結果をスキーマに基づいて検証
     if let Err(validation_error) = validate_against_schema(&result_map, schema) {
-        eprintln!("{}", validation_error);
+        all_errors.push(validation_error); // エラーを収集
     }
 
-    Ok(result_map)
+    // すべてのエラーを出力
+    if !all_errors.is_empty() {
+        for error in all_errors {
+            eprintln!("{}", error);
+        }
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "設定ファイルにエラーがあります。",
+        ));
+    } else {
+        // エラーがない場合のみ、このメッセージを表示
+        println!("全てのファイルが正常にパースされ、スキーマに従っています。");
+    }
+
+    Ok(())
 }
 
 /// 再帰的にディレクトリ内の.confファイルを探索してパース
