@@ -40,11 +40,7 @@ pub fn parse_all_sysctl_files(
             io::ErrorKind::InvalidData,
             "設定ファイルにエラーがあります。",
         ));
-    } else {
-        // エラーがない場合のみ、このメッセージを表示
-        println!("全てのファイルが正常にパースされ、スキーマに従っています。");
     }
-
     Ok(())
 }
 
