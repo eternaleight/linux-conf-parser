@@ -19,9 +19,24 @@ fn main() -> io::Result<()> {
 
     // スキーマファイルを読み込む
     let schema_path = Path::new("schema.txt");
-    let schema = schema::load_schema(schema_path)?;
-
-    directory_parser::parse_all_sysctl_files(&directories, &schema)?;
+    match schema::load_schema(schema_path) {
+        Ok(schema) => {
+            // スキーマのロードに成功した場合、ディレクトリを再帰的に探索してファイルをパース
+            match directory_parser::parse_all_sysctl_files(&directories, &schema) {
+                Ok(_) => {
+                    println!("全てのファイルが正常にパースされ、スキーマに従っています。");
+                }
+                Err(e) => {
+                    eprintln!("設定ファイルのパース中にエラーが発生しました: {}", e);
+                    return Err(e);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("スキーマファイルの読み込みに失敗しました: {}", e);
+            return Err(e);
+        }
+    }
 
     Ok(())
 }

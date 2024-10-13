@@ -23,7 +23,6 @@ fn setup_test_file(file_name: &str, content: &str) -> PathBuf {
     // ファイルを作成して内容を書き込む
     let mut file = File::create(&file_path).unwrap();
     file.write_all(content.as_bytes()).unwrap();
-    // file.flush().unwrap(); // バッファをディスクにフラッシュ
 
     // 作成されたファイルパスを表示（デバッグ用）
     println!("ファイル作成: {:?}", file_path);
@@ -82,17 +81,12 @@ fn test_valid_conf_file() {
     println!("{:?}", map);
 
     assert_eq!(
-        map.get("net")
-            .expect("net が存在しません")
-            .get("tcp_syncookies")
+        map.get("net.ipv4.tcp_syncookies")
             .expect("tcp_syncookies が存在しません"),
         "1"
     );
     assert_eq!(
-        map.get("fs")
-            .expect("fs が存在しません")
-            .get("file-max")
-            .expect("file-max が存在しません"),
+        map.get("fs.file-max").expect("file-max が存在しません"),
         "2097152"
     );
     cleanup_test_files();
@@ -113,7 +107,7 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
 
     // スキーマファイルを読み込む
     let schema_path = Path::new("schema.txt");
-    let schema = schema::load_schema(&schema_path)?;
+    let schema = schema::load_schema(schema_path)?;
 
     let result = parse_all_sysctl_files(&directories, &schema);
 
@@ -127,14 +121,14 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
         // 期待するキーと値が存在するか確認
         println!("map: {:?}", map); // マップ全体を表示してデバッグ
         assert_eq!(
-            map.get("net").and_then(|m| m.get("tcp_syncookies")),
-            Some(&"1".to_string()),
-            "net.ipv4.tcp_syncookiesの値が期待と異なります"
+            map.get("net.ipv4.tcp_syncookies")
+                .expect("net.ipv4.tcp_syncookiesの値が期待と異なります"),
+            "1"
         );
         assert_eq!(
-            map.get("fs").and_then(|m| m.get("file-max")),
-            Some(&"2097152".to_string()),
-            "fs.file-maxの値が期待と異なります"
+            map.get("fs.file-max")
+                .expect("fs.file-maxの値が期待と異なります"),
+            "2097152"
         );
     }
     cleanup_test_files();

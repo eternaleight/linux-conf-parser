@@ -1,6 +1,6 @@
 use crate::file_parser::parse_sysctl_conf;
 use crate::schema::validate_against_schema;
-use crate::utils::display_map;
+use crate::utils::display_json_map;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::fs;
 use std::io;
@@ -9,7 +9,7 @@ use std::path::Path;
 pub fn parse_all_sysctl_files(
     directories: &[&str],
     schema: &FxHashMap<String, String>,
-) -> io::Result<FxHashMap<String, FxHashMap<String, String>>> {
+) -> io::Result<FxHashMap<String, String>> {
     let mut parsed_files = FxHashSet::default();
     let mut result_map = FxHashMap::default();
 
@@ -37,7 +37,7 @@ pub fn parse_all_sysctl_files(
 fn parse_sysctl_dir(
     path: &Path,
     parsed_files: &mut FxHashSet<String>,
-    result_map: &mut FxHashMap<String, FxHashMap<String, String>>,
+    result_map: &mut FxHashMap<String, String>,
 ) -> io::Result<()> {
     for entry in fs::read_dir(path).map_err(|e| {
         eprintln!(
@@ -66,14 +66,11 @@ fn parse_sysctl_dir(
             }
             println!("File: {:?}", path);
             let config_map = parse_sysctl_conf(&path)?;
-            display_map(&config_map);
+            display_json_map(&config_map);
             println!();
 
-            for (key, value_map) in &config_map {
-                result_map
-                    .entry(key.to_string())
-                    .or_default()
-                    .extend(value_map.clone());
+            for (key, value) in &config_map {
+                result_map.insert(key.to_string(), value.clone());
             }
 
             // パース済みとしてセットに追加
@@ -84,4 +81,3 @@ fn parse_sysctl_dir(
     }
     Ok(())
 }
-

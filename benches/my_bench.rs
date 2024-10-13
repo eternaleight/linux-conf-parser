@@ -6,7 +6,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use test::Bencher;
 
-
 fn setup_test_file(file_name: &str, content: &str) -> PathBuf {
     let test_dir = PathBuf::from("test_data");
     let file_path = test_dir.join(file_name);
@@ -24,10 +23,14 @@ fn setup_test_file(file_name: &str, content: &str) -> PathBuf {
     // ファイルを作成して内容を書き込む
     let mut file = File::create(&file_path).unwrap();
     file.write_all(content.as_bytes()).unwrap();
-    file.flush().unwrap();  // 明示的にフラッシュして、データを確実にディスクに書き込む
+    file.flush().unwrap(); // 明示的にフラッシュして、データを確実にディスクに書き込む
 
     println!("ファイル作成: {:?}", file_path);
-    assert!(file_path.exists(), "ファイルが作成されていません: {:?}", file_path);
+    assert!(
+        file_path.exists(),
+        "ファイルが作成されていません: {:?}",
+        file_path
+    );
 
     file_path
 }
@@ -66,18 +69,18 @@ mod benchmarks {
         file_parser::parse_sysctl_conf(&file_path).unwrap();
     });
 
-create_bench!(bench_parse_all_sysctl_files, || {
-    let _ = setup_test_file("dir1/test1.conf", "net.ipv4.tcp_syncookies = 1");
-    let _ = setup_test_file("dir1/subdir/test2.conf", "fs.file-max = 2097152");
-    let directories = ["test_data/dir1"];
-    
-    // スキーマファイルを読み込む
-    let schema_path = Path::new("schema.txt");
-    let schema = schema::load_schema(&schema_path).unwrap();  // スキーマを読み込む
+    create_bench!(bench_parse_all_sysctl_files, || {
+        let _ = setup_test_file("dir1/test1.conf", "net.ipv4.tcp_syncookies = 1");
+        let _ = setup_test_file("dir1/subdir/test2.conf", "fs.file-max = 2097152");
+        let directories = ["test_data/dir1"];
 
-    // directories と schema の両方を渡す
-    directory_parser::parse_all_sysctl_files(&directories, &schema).unwrap();
-});
+        // スキーマファイルを読み込む
+        let schema_path = Path::new("schema.txt");
+        let schema = schema::load_schema(&schema_path).unwrap(); // スキーマを読み込む
+
+        // directories と schema の両方を渡す
+        directory_parser::parse_all_sysctl_files(&directories, &schema).unwrap();
+    });
 
     create_bench!(bench_empty_conf_file, || {
         let file_path = setup_test_file("empty.conf", ""); // 空の設定ファイルをパースする
