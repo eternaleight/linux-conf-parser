@@ -48,7 +48,7 @@ pub fn validate_against_schema(
     config_map: &FxHashMap<String, String>,
     schema: &FxHashMap<String, String>,
 ) -> Result<(), String> {
-    let mut errors = Vec::new(); // エラーを収集するベクター
+    let mut errors = Vec::new(); // エラーを収集するベクター// let mut errors = vec![]; // こっちのが楽か
 
     for (key, value) in config_map {
         if let Some(expected_type) = schema.get(key) {
@@ -65,7 +65,7 @@ pub fn validate_against_schema(
                 "bool" => {
                     if value != "true" && value != "false" {
                         errors.push(format!(
-                            "Error: キー '{}' の値 '{}' はブール値ではありません。",
+                            "\x1b[31mError: キー '{}' の値 '{}' はブール値ではありません。\x1b[0m",
                             key, value
                         ));
                     }
@@ -73,20 +73,23 @@ pub fn validate_against_schema(
                 "int" => {
                     if value.parse::<i64>().is_err() {
                         errors.push(format!(
-                            "Error: キー '{}' の値 '{}' は整数ではありません。",
+                            "\x1b[31mError: キー '{}' の値 '{}' は整数ではありません。\x1b[0m",
                             key, value
                         ));
                     }
                 }
                 _ => {
                     errors.push(format!(
-                        "Error: キー '{}' のスキーマ型 '{}' はサポートされていません。",
+                        "\x1b[31mError: キー '{}' のスキーマ型 '{}' はサポートされていません。\x1b[0m",
                         key, expected_type
                     ));
                 }
             }
         } else {
-            errors.push(format!("Error: キー '{}' はスキーマに存在しません。", key));
+            errors.push(format!(
+                "\x1b[31mError: キー '{}' はスキーマに存在しません。\x1b[0m",
+                key
+            ));
         }
     }
 
