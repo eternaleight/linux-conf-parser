@@ -1,6 +1,6 @@
-use projects::directory_parser::parse_all_sysctl_files;
-use projects::file_parser::{parse_sysctl_conf, MAX_VALUE_LENGTH};
-use projects::schema;
+use linux_conf_parser::directory_parser::parse_all_sysctl_files;
+use linux_conf_parser::file_parser::{parse_sysctl_conf, MAX_VALUE_LENGTH};
+use linux_conf_parser::schema;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
