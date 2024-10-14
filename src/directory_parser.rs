@@ -1,6 +1,7 @@
 use crate::file_parser::parse_sysctl_conf;
 use crate::schema::validate_against_schema;
-use crate::utils::display_json_map;
+use crate::utils::display::display_json_map;
+
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::fs;
 use std::io;

@@ -2,8 +2,10 @@ mod directory_parser;
 mod file_parser;
 mod schema;
 mod utils;
+mod validator;
 
 use std::io;
+use validator::load_and_validate_schema;
 
 fn main() -> io::Result<()> {
     // 再帰的に探索するディレクトリ
@@ -18,7 +20,7 @@ fn main() -> io::Result<()> {
     ];
 
     // 依存性を注入してスキーマファイルの読み込みと検証を実行
-    schema::load_and_validate_schema(
+    load_and_validate_schema(
         "schema.txt",
         &directories,
         directory_parser::parse_all_sysctl_files,
