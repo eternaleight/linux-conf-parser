@@ -121,3 +121,127 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+    use rustc_hash::FxHashMap;
+    use schema::{load_schema, validate_against_schema};
+    use std::fs::File;
+    use std::io::Write;
+
+    /// テスト用のスキーマファイルをセットアップするヘルパー関数
+    fn setup_test_schema(file_name: &str, content: &str) -> PathBuf {
+        let test_dir = PathBuf::from("test_data");
+        let file_path = test_dir.join(file_name);
+
+        if let Some(parent_dir) = file_path.parent() {
+            fs::create_dir_all(parent_dir).unwrap();
+        }
+
+        if file_path.exists() {
+            fs::remove_file(&file_path).unwrap();
+        }
+
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+        file_path
+    }
+
+    /// 正常なスキーマファイルの読み込みテスト
+    #[test]
+    fn test_load_valid_schema() {
+        let schema_content = r#"
+        key1 -> string
+        key2 -> int
+        key3 -> bool
+        "#;
+        let schema_path = setup_test_schema("valid_schema.txt", schema_content);
+        let result = load_schema(&schema_path);
+        assert!(result.is_ok(), "スキーマファイルの読み込みに失敗しました");
+
+        let schema = result.unwrap();
+        assert_eq!(schema.get("key1").unwrap(), "string");
+        assert_eq!(schema.get("key2").unwrap(), "int");
+        assert_eq!(schema.get("key3").unwrap(), "bool");
+
+        cleanup_test_files();
+    }
+
+    /// 不正な形式のスキーマファイルの読み込みテスト
+    #[test]
+    fn test_load_invalid_schema() {
+        let schema_content = r#"
+        key1 -> string
+        invalid_format_line
+        key2 -> int
+        "#;
+        let schema_path = setup_test_schema("invalid_schema.txt", schema_content);
+        let result = load_schema(&schema_path);
+
+        // エラーメッセージが適切に表示され、結果がエラーになることを確認
+        assert!(result.is_ok(), "不正な形式の行を無視しなければなりません");
+
+        let schema = result.unwrap();
+        assert_eq!(schema.get("key1").unwrap(), "string");
+        assert_eq!(schema.get("key2").unwrap(), "int");
+
+        cleanup_test_files();
+    }
+
+    /// 設定ファイルの検証テスト（すべてが正しい場合）
+    #[test]
+    fn test_validate_against_valid_schema() {
+        let mut config = FxHashMap::default();
+        config.insert("key1".to_string(), "value".to_string());
+        config.insert("key2".to_string(), "42".to_string());
+        config.insert("key3".to_string(), "true".to_string());
+
+        let mut schema = FxHashMap::default();
+        schema.insert("key1".to_string(), "string".to_string());
+        schema.insert("key2".to_string(), "int".to_string());
+        schema.insert("key3".to_string(), "bool".to_string());
+
+        let result = validate_against_schema(&config, &schema);
+        assert!(result.is_ok(), "検証に成功する必要があります");
+    }
+
+    /// 設定ファイルの検証テスト（型が一致しない場合）
+    #[test]
+    fn test_validate_against_invalid_schema() {
+        let mut config = FxHashMap::default();
+        config.insert("key1".to_string(), "value".to_string()); // 正しい
+        config.insert("key2".to_string(), "not_an_int".to_string()); // intのはずが文字列
+        config.insert("key3".to_string(), "not_a_bool".to_string()); // boolのはずが文字列
+
+        let mut schema = FxHashMap::default();
+        schema.insert("key1".to_string(), "string".to_string());
+        schema.insert("key2".to_string(), "int".to_string());
+        schema.insert("key3".to_string(), "bool".to_string());
+
+        let result = validate_against_schema(&config, &schema);
+        assert!(result.is_err(), "検証は失敗する必要があります");
+
+        let errors = result.unwrap_err();
+        assert!(errors.contains("キー 'key2' の値 'not_an_int' は整数ではありません"));
+        assert!(errors.contains("キー 'key3' の値 'not_a_bool' はブール値ではありません"));
+    }
+
+    /// スキーマに存在しないキーを含む設定ファイルの検証テスト
+    #[test]
+    fn test_validate_with_extra_key() {
+        let mut config = FxHashMap::default();
+        config.insert("key1".to_string(), "value".to_string());
+        config.insert("extra_key".to_string(), "value".to_string()); // スキーマに存在しないキー
+
+        let mut schema = FxHashMap::default();
+        schema.insert("key1".to_string(), "string".to_string());
+
+        let result = validate_against_schema(&config, &schema);
+        assert!(result.is_err(), "検証は失敗する必要があります");
+
+        let errors = result.unwrap_err();
+        assert!(errors.contains("キー 'extra_key' はスキーマに存在しません"));
+    }
+}
