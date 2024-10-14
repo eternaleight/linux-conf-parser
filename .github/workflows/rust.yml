@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - '*'
+    paths-ignore:
+      - 'README.md'
   pull_request:
     branches:
       - '*'
@@ -42,5 +44,7 @@ jobs:
     - name: Build
       run: cargo build --verbose
 
-    - name: Run tests
-      run: cargo test --verbose
+    - name: Run tests serially
+      run: cargo test --verbose -- --test-threads=1
+      env:
+        RUST_TEST_THREADS: 1
