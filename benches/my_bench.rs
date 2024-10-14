@@ -54,11 +54,9 @@ macro_rules! create_bench {
 // ベンチマーク関数を生成
 #[cfg(test)]
 mod benchmarks {
-    use std::path::Path;
-
-    use linux_conf_parser::{directory_parser, file_parser, schema};
-
     use super::*;
+    use linux_conf_parser::core::{directory_parser, file_parser, schema};
+    use std::path::Path;
 
     // 既存のベンチマーク
     create_bench!(bench_parse_sysctl_conf, || {

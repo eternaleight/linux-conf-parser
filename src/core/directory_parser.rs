@@ -1,11 +1,12 @@
-use crate::file_parser::parse_sysctl_conf;
-use crate::schema::validate_against_schema;
+use crate::core::file_parser::parse_sysctl_conf;
 use crate::utils::display::display_json_map;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::fs;
 use std::io;
 use std::path::Path;
+
+use super::schema::validate_against_schema;
 
 pub fn parse_all_sysctl_files(
     directories: &[&str],

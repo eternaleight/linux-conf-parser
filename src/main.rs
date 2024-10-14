@@ -1,11 +1,10 @@
-mod directory_parser;
-mod file_parser;
-mod schema;
+mod core;
 mod utils;
-mod validator;
 
+use core::directory_parser;
+use core::schema;
+use core::validate_and_parse_sysctl;
 use std::io;
-use validator::load_and_validate_schema;
 
 fn main() -> io::Result<()> {
     // 再帰的に探索するディレクトリ
@@ -19,8 +18,8 @@ fn main() -> io::Result<()> {
         "config",
     ];
 
-    // 依存性を注入してスキーマファイルの読み込みと検証を実行
-    load_and_validate_schema(
+    // 依存性を注入し、スキーマ検証とSysctlファイルのパースを実行
+    validate_and_parse_sysctl(
         "schema.txt",
         &directories,
         directory_parser::parse_all_sysctl_files,
