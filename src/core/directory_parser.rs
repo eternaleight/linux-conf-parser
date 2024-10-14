@@ -11,9 +11,9 @@ use super::schema::validate_against_schema;
 pub fn parse_all_sysctl_files(
     directories: &[&str],
     schema: &FxHashMap<String, String>,
+    result_map: &mut FxHashMap<String, String>,
 ) -> io::Result<()> {
     let mut parsed_files = FxHashSet::default();
-    let mut result_map = FxHashMap::default();
     let mut all_errors = Vec::new(); // 全てのエラーを収集
 
     for dir in directories {
@@ -25,11 +25,11 @@ pub fn parse_all_sysctl_files(
             );
             continue;
         }
-        parse_sysctl_dir(path, &mut parsed_files, &mut result_map)?;
+        parse_sysctl_dir(path, &mut parsed_files, result_map)?;
     }
 
     // パース結果をスキーマに基づいて検証
-    if let Err(validation_error) = validate_against_schema(&result_map, schema) {
+    if let Err(validation_error) = validate_against_schema(result_map, schema) {
         all_errors.push(validation_error); // エラーを収集
     }
 

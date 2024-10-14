@@ -1,0 +1,12 @@
+log.file ->
+endpoint ->
+net.ipv4.tcp_syncookies ->
+kernel.modprobe ->
+debug ->
+kernel.sysrq ->
+log.name ->
+kernel.domainname ->
+net.core.somaxconn ->
+kernel.panic ->
+vm.swappiness ->
+fs.file-max ->

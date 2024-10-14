@@ -1,6 +1,7 @@
 use linux_conf_parser::core::directory_parser::parse_all_sysctl_files;
 use linux_conf_parser::core::file_parser::{parse_sysctl_conf, MAX_VALUE_LENGTH};
 use linux_conf_parser::core::schema;
+use rustc_hash::FxHashMap;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -99,8 +100,8 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
     let content2 = "fs.file-max = 2097152";
 
     // ファイルをセットアップ
-    let _ = setup_test_file("dir1/test1.conf", content1);
-    let _ = setup_test_file("dir1/subdir/test2.conf", content2);
+    setup_test_file("dir1/test1.conf", content1); // 修正: "test_data/" を削除
+    setup_test_file("dir1/subdir/test2.conf", content2); // 修正: "test_data/" を削除
 
     // 再帰的にディレクトリを探索してパースする
     let directories = ["test_data/dir1"];
@@ -109,14 +110,23 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
     let schema_path = Path::new("schema.txt");
     let schema = schema::load_schema(schema_path)?;
 
-    let result = parse_all_sysctl_files(&directories, &schema);
+    let mut result_map = FxHashMap::default();
+    let result = parse_all_sysctl_files(&directories, &schema, &mut result_map);
 
     // パース結果をデバッグ表示
-    println!("パース結果: {:?}", result);
+    println!("パース結果: {:?}", result_map);
 
     // パースが成功したことを確認
     assert!(result.is_ok(), "Sysctlファイルのパースに失敗しました");
 
+    // パース結果の検証
+    assert_eq!(
+        result_map.get("net.ipv4.tcp_syncookies"),
+        Some(&"1".to_string())
+    );
+    assert_eq!(result_map.get("fs.file-max"), Some(&"2097152".to_string()));
+
+    // テスト後のクリーンアップ
     cleanup_test_files();
 
     Ok(())
