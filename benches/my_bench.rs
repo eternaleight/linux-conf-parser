@@ -56,7 +56,7 @@ macro_rules! create_bench {
 mod benchmarks {
     use std::path::Path;
 
-    use projects::{directory_parser, file_parser, schema};
+    use linux_conf_parser::{directory_parser, file_parser, schema};
 
     use super::*;
 

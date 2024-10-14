@@ -503,10 +503,10 @@ stable チャンネルに戻ります。
 実行後、各ベンチマークの実行時間がナノ秒単位で表示されます。以下のような結果が表示されます。
 
 ```
-test benchmarks::bench_parse_sysctl_conf      ... bench:     310,099.90 ns/iter (+/- 17,509.09)
-test benchmarks::bench_parse_all_sysctl_files ... bench:     346,716.67 ns/iter (+/- 62,653.50)
-test benchmarks::bench_empty_conf_file        ... bench:       2,000.00 ns/iter (+/- 50.00)
-test benchmarks::bench_large_conf_file        ... bench:  1,000,000.00 ns/iter (+/- 100,000.00)
+test benchmarks::bench_empty_conf_file        ... bench:     114,022.41 ns/iter (+/- 48,714.07)
+test benchmarks::bench_large_conf_file        ... bench:     636,778.90 ns/iter (+/- 247,165.45)
+test benchmarks::bench_parse_all_sysctl_files ... bench:     498,996.82 ns/iter (+/- 311,588.69)
+test benchmarks::bench_parse_sysctl_conf      ... bench:     377,210.36 ns/iter (+/- 33,725.80)
 ```
 
 - **ns/iter**: 1回の処理にかかった時間（ナノ秒）。
