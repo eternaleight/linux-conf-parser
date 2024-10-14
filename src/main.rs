@@ -3,7 +3,7 @@ mod file_parser;
 mod schema;
 mod utils;
 
-use std::{io, path::Path};
+use std::io;
 
 fn main() -> io::Result<()> {
     // 再帰的に探索するディレクトリ
@@ -17,32 +17,19 @@ fn main() -> io::Result<()> {
         "config",
     ];
 
-    // スキーマファイルを読み込む
-    let schema_path = Path::new("schema.txt");
-    match schema::load_schema(schema_path) {
-        Ok(schema) => {
-            // スキーマのロードに成功した場合、ディレクトリを再帰的に探索してファイルをパース
-            match directory_parser::parse_all_sysctl_files(&directories, &schema) {
-                Ok(_) => {
-                    println!("全てのファイルが正常にパースされ、スキーマに従っています。");
-                }
-                Err(e) => {
-                    eprintln!("設定ファイルのパース中にエラーが発生しました: 設定ファイルを確認して下さい。");
-                    return Err(e);
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("スキーマファイルの読み込みに失敗しました: {}", e);
-            return Err(e);
-        }
-    }
-
-    Ok(())
+    // 依存性を注入してスキーマファイルの読み込みと検証を実行
+    schema::load_and_validate_schema(
+        "schema.txt",
+        &directories,
+        directory_parser::parse_all_sysctl_files,
+        schema::load_schema,
+    )
 }
 
-// 本番システム用
-// mod parser;
+// // 本番システム用
+// mod directory_parser;
+// mod file_parser;
+// mod schema;
 // mod utils;
 
 // use std::io;
@@ -58,7 +45,11 @@ fn main() -> io::Result<()> {
 //         "/etc",
 //     ];
 
-//     parser::parse_all_sysctl_files(&directories)?;
-
-//     Ok(())
+// // 依存性を注入してスキーマファイルの読み込みと検証を実行
+// schema::load_and_validate_schema(
+//     "schema.txt",
+//     &directories,
+//     directory_parser::parse_all_sysctl_files,
+//     schema::load_schema,
+// )
 // }
