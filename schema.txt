@@ -3,3 +3,15 @@ debug -> bool
 log.file -> string
 net.ipv4.tcp_syncookies -> int
 fs.file-max -> string
+log.file ->string
+endpoint ->string
+net.ipv4.tcp_syncookies ->string
+kernel.modprobe ->string
+debug ->string
+kernel.sysrq ->string
+log.name ->string
+kernel.domainname ->string
+net.core.somaxconn ->string
+kernel.panic ->string
+vm.swappiness ->string
+fs.file-max ->string

@@ -1,10 +1,9 @@
-use std::{io, path::Path};
-
-use rustc_hash::FxHashMap;
-
 pub mod directory_parser;
 pub mod file_parser;
 pub mod schema;
+
+use rustc_hash::FxHashMap;
+use std::{io, path::Path};
 
 type ParseFn =
     fn(&[&str], &FxHashMap<String, String>, &mut FxHashMap<String, String>) -> io::Result<()>;
