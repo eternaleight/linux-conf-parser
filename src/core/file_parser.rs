@@ -61,7 +61,7 @@ pub fn output_empty_values_to_file(
     match output_file {
         Ok(mut file) => {
             println!(
-                "空の型定義ファイル {} を作成しました。🖋️✨
+                "\n空の型定義ファイル {} を作成しました。🖋️✨
 1.schema.txtに名前を変更して型定義ファイルを作成して下さい。
 2.cargo runで.conf ファイルの設定をJSON 形式で出力し、型の検証結果も表示。
 ",
