@@ -37,3 +37,12 @@ fn main() -> io::Result<()> {
     // cargo run output .confファイルの空の型定義ファイルを出力
     handle_output(result, &result_map)
 }
+
+// 本番想定ディレクトリ
+// let directories = [
+//     "/etc/sysctl.d",
+//     "/run/sysctl.d",
+//     "/usr/local/lib/sysctl.d",
+//     "/usr/lib/sysctl.d",
+//     "/lib/sysctl.d",
+// ];

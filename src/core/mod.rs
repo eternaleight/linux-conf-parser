@@ -34,7 +34,7 @@ pub fn validate_and_parse_sysctl(
             Ok(())
         }
         Err(e) => {
-            eprintln!("設定ファイルのパース中にエラーが発生しました: {}", e);
+            eprintln!("設定ファイルのパース中にエラーが発生しました: {}\n", e);
             Err(e)
         }
     }

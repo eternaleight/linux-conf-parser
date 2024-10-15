@@ -60,12 +60,18 @@ pub fn output_empty_values_to_file(
     let output_file = File::create(output_file_path);
     match output_file {
         Ok(mut file) => {
-            println!("ファイル {} を作成しました。", output_file_path);
+            println!(
+                "空の型定義ファイル {} を作成しました。🖋️✨
+1.schema.txtに名前を変更して型定義ファイルを作成して下さい。
+2.cargo runで.conf ファイルの設定をJSON 形式で出力し、型の検証結果も表示。
+",
+                output_file_path
+            );
             // パース結果のキーを空の値として出力
             for key in result_map.keys() {
                 writeln!(file, "{} ->", key)?;
             }
-            println!("ファイルに書き込みが完了しました: {}", output_file_path);
+            // println!("ファイルに書き込みが完了しました: {}", output_file_path);
         }
         Err(e) => {
             eprintln!("ファイル {} の作成に失敗しました: {}", output_file_path, e);

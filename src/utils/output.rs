@@ -16,7 +16,7 @@ pub fn handle_output(
         if result.is_ok() {
             println!("パース結果をファイルに出力します。");
         } else {
-            println!("エラーが発生しましたが、空の値を含むファイルを出力します。");
+            // println!("エラーが発生しましたが、空の型定義を含むファイルを出力します。");
         }
         // パース結果を使ってファイルに出力
         output_empty_values_to_file(result_map, output_file_path)
@@ -30,7 +30,7 @@ pub fn handle_output(
             // }
             Ok(())
         } else {
-            println!("パースに失敗しました");
+            // println!("パースに失敗しました");
             Ok(())
         }
     }

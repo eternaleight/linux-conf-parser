@@ -1,6 +1,5 @@
 use crate::core::file_parser::parse_sysctl_conf;
 use crate::utils::display::display_json_map;
-
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::fs;
 use std::io;
@@ -25,7 +24,13 @@ pub fn parse_all_sysctl_files(
             );
             continue;
         }
-        parse_sysctl_dir(path, &mut parsed_files, result_map)?;
+        if let Err(e) = parse_sysctl_dir(path, &mut parsed_files, result_map) {
+            all_errors.push(format!(
+                "ディレクトリ '{}' のパースに失敗しました: {}",
+                path.display(),
+                e
+            ));
+        }
     }
 
     // パース結果をスキーマに基づいて検証
@@ -52,14 +57,16 @@ fn parse_sysctl_dir(
     parsed_files: &mut FxHashSet<String>,
     result_map: &mut FxHashMap<String, String>,
 ) -> io::Result<()> {
-    for entry in fs::read_dir(path).map_err(|e| {
+    let entries = fs::read_dir(path).map_err(|e| {
         eprintln!(
             "Error: ディレクトリ '{}' の読み込みに失敗しました: {}",
             path.display(),
             e
         );
         e
-    })? {
+    })?;
+
+    for entry in entries {
         let entry = entry.map_err(|e| {
             eprintln!(
                 "Error: ディレクトリ内のエントリへのアクセスに失敗しました: {}",
@@ -70,27 +77,51 @@ fn parse_sysctl_dir(
         let path = entry.path();
 
         // ファイルのパスを文字列に変換
-        let path_str = path.to_string_lossy().to_string();
-
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("conf") {
-            if parsed_files.contains(&path_str) {
-                // 既にパース済みならスキップ
-                continue;
-            }
-            println!("File: {:?}", path);
-            let config_map = parse_sysctl_conf(&path)?;
-            display_json_map(&config_map);
-            println!();
-
-            for (key, value) in &config_map {
-                result_map.insert(key.to_string(), value.clone());
-            }
-
-            // パース済みとしてセットに追加
-            parsed_files.insert(path_str);
+            parse_conf_file(&path, parsed_files, result_map)?;
         } else if path.is_dir() {
             parse_sysctl_dir(&path, parsed_files, result_map)?;
         }
     }
+
+    Ok(())
+}
+
+/// .conf ファイルのパース処理
+fn parse_conf_file(
+    path: &Path,
+    parsed_files: &mut FxHashSet<String>,
+    result_map: &mut FxHashMap<String, String>,
+) -> io::Result<()> {
+    let path_str = path.to_string_lossy().to_string();
+
+    if parsed_files.contains(&path_str) {
+        // 既にパース済みならスキップ
+        return Ok(());
+    }
+
+    println!("File: {:?}", path);
+    match parse_sysctl_conf(path) {
+        Ok(config_map) => {
+            display_json_map(&config_map);
+            println!();
+
+            // パース結果を result_map に追加
+            for (key, value) in config_map {
+                result_map.insert(key.to_string(), value);
+            }
+
+            // パース済みとしてセットに追加
+            parsed_files.insert(path_str);
+        }
+        Err(e) => {
+            eprintln!(
+                "Error: ファイル '{}' のパースに失敗しました: {}",
+                path.display(),
+                e
+            );
+        }
+    }
+
     Ok(())
 }
