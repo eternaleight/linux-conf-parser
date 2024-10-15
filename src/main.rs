@@ -4,7 +4,9 @@ mod utils;
 use core::directory_parser;
 use core::schema;
 use core::validate_and_parse_sysctl;
+use rustc_hash::FxHashMap;
 use std::io;
+use utils::output::handle_output;
 
 fn main() -> io::Result<()> {
     // 再帰的に探索するディレクトリ
@@ -18,39 +20,29 @@ fn main() -> io::Result<()> {
         "config",
     ];
 
-    // 依存性を注入し、スキーマ検証とSysctlファイルのパースを実行
-    validate_and_parse_sysctl(
+    // パース結果を格納するマップ
+    let mut result_map: FxHashMap<String, String> = FxHashMap::default();
+
+    // スキーマ検証とSysctlファイルのパースを実行
+    let result = validate_and_parse_sysctl(
         "schema.txt",
         &directories,
         directory_parser::parse_all_sysctl_files,
         schema::load_schema,
-    )
+        &mut result_map,
+    );
+
+    // コマンドライン引数に応じて出力方法を分岐
+    // cargo run .confファイルの設定を出力
+    // cargo run output .confファイルの空の型定義ファイルを出力
+    handle_output(result, &result_map)
 }
 
-// // 本番システム用
-// mod directory_parser;
-// mod file_parser;
-// mod schema;
-// mod utils;
-
-// use std::io;
-
-// fn main() -> io::Result<()> {
-//     // 再帰的に探索するディレクトリ
-//     let directories = [
-//         "/etc/sysctl.d",
-//         "/run/sysctl.d",
-//         "/usr/local/lib/sysctl.d",
-//         "/usr/lib/sysctl.d",
-//         "/lib/sysctl.d",
-//         "/etc",
-//     ];
-
-// // 依存性を注入してスキーマファイルの読み込みと検証を実行
-// schema::load_and_validate_schema(
-//     "schema.txt",
-//     &directories,
-//     directory_parser::parse_all_sysctl_files,
-//     schema::load_schema,
-// )
-// }
+// 本番想定ディレクトリ
+// let directories = [
+//     "/etc/sysctl.d",
+//     "/run/sysctl.d",
+//     "/usr/local/lib/sysctl.d",
+//     "/usr/lib/sysctl.d",
+//     "/lib/sysctl.d",
+// ];

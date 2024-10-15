@@ -8,5 +8,5 @@ log.file = /var/log/console.log
 log.name = default.log
 value.too.long = $long_value
 EOL
-echo "create long_value_test.conf🖊️✨"
+echo "create long_value_test.conf🖋️✨"
 echo
