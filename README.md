@@ -2,7 +2,8 @@
 🔨作成中(WIP)
 
 ![CleanShot 2024-10-14 at 02 44 47](https://github.com/user-attachments/assets/d05ac8b0-37eb-42cd-b605-51919885eacd)
-![CleanShot 2024-10-16 at 00 18 40](https://github.com/user-attachments/assets/0b59f20a-b6d8-497f-9245-3c974934c8a8)
+![CleanShot 2024-10-16 at 15 08 39](https://github.com/user-attachments/assets/e9762f54-5161-41d3-a480-e88c6b52a076)
+
 
 このRustプログラムは、`sysctl.conf`形式の設定ファイルを解析し、ネストされたキーと値のペアを`FxHashMap`に格納するパーサです。指定されたディレクトリを再帰的に探索し、`.conf`ファイルを読み込んで解析します。コメント行や空行を無視し、特定のエラーハンドリングにも対応しています。
 
@@ -96,13 +97,14 @@ cargo run
 実行すると、指定された`config`ディレクトリ内のすべての`.conf`ファイルが再帰的に処理され、それぞれのファイルごとに以下のような形式で出力されます。
 
 ```
-File: config/etc/sysctl.d/99-example.conf
-fs
-  file-max 2097152
-
-net
-  core
-    somaxconn 1024
+File: "config/example1.conf"
+{
+  "debug": "true",
+  "endpoint": "localhost:3000",
+  "log": {
+    "file": "/var/log/console.log"
+  }
+}
 ```
 
 ### 3. ディレクトリの指定
@@ -143,20 +145,17 @@ let directories = [
 本番システムでこのプログラムを使用する場合、以下の手順に従ってください。
 
 1. **開発用コードをコメントアウトし、本番システム用のコードを有効にする**  
-   現在、ソースコード内に開発用と本番用のコードが共存しています。実際に本番システムで動作させる際は、開発用のコードをコメントアウトし、以下の部分を有効化してください。
+   現在、ソースコード内に開発用と本番用のコードが共存しています。実際に本番システムで動作させる際は、開発用のコードをコメントアウトし、以下の部分を本番システム用ディレクトリに入れ替えて使用してください。
 
    ```rust
+   // main.rs
+   
    // 開発用コードをコメントアウト
-   // mod parser;
+   // mod core;
    // mod utils;
    ...
-   
-   // 本番システム用コードを有効化
-   mod parser;
-   mod utils;
 
-   use std::io;
-
+   // 本番想定ディレクトリ
    fn main() -> io::Result<()> {
    // 再帰的に探索するディレクトリ
        let directories = [
@@ -167,10 +166,8 @@ let directories = [
            "/lib/sysctl.d",
            "/etc",
        ];
-
-       parser::parse_all_sysctl_files(&directories)?;
-
-       Ok(())
+   ...
+   
    }
    ```
 
@@ -181,6 +178,109 @@ let directories = [
 
 - 行の先頭に`-`が付いている場合、その行のエラーは無視されます。
 - 設定値が4096文字を超える場合、警告が表示され、その行は無視されます。
+
+## 型定義ファイルの作成と検証
+![CleanShot 2024-10-16 at 15 14 29](https://github.com/user-attachments/assets/07c320a4-6053-4096-844e-00345b11d05e)
+
+
+### `cargo run output` で空の型定義ファイルを作成
+
+1. `cargo run output` を実行し、空の型定義ファイル `output.txt` を作成します。
+    ```
+    cargo run output
+    ```
+
+    このコマンドは、システムの設定に基づいて空の型定義ファイルを生成します。次の手順でこのファイルを型定義ファイルとして使用します。
+
+3. `output.txt` を `schema.txt` に名前を変更します。このファイルは、型定義ファイルとして使用されます。schema.txtで型の定義を行って下さい。
+
+    ```bash
+    mv output.txt schema.txt
+    ```
+
+### `cargo run` で.confファイルをJSON形式で出力し、型の検証を行う
+
+3. 型定義ファイル（`schema.txt`）を使って、システムの `.conf` ファイルの設定を検証し、JSON形式で出力します。以下のコマンドを実行してください。
+
+    ```bash
+    cargo run
+    ```
+
+- **動作**: このコマンドは、`.conf` ファイルを解析し、型定義ファイルに基づいて設定の正当性を検証します。
+- **出力**: 設定ファイルの内容をJSON形式で表示し、型が不一致の場合はエラーメッセージが表示されます。
+### シンプルな手順例
+```bash
+# 空の型定義ファイルを生成
+cargo run output
+
+# output.txtをschema.txtに名前変更を変更して、schema.txtで型の定義を行う
+mv output.txt schema.txt
+
+# .confファイルの設定をJSON 形式で出力し、型の検証結果も表示
+cargo run
+
+## 使用方法
+
+型定義ファイルは次の形式で記述します
+
+例：schema.txt
+
+log.file -> string
+endpoint -> string
+net.ipv4.tcp_syncookies -> int
+kernel.modprobe ->string
+debug -> bool
+kernel.sysrq -> int
+log.name -> string
+kernel.domainname -> string
+net.core.somaxconn -> float
+kernel.panic -> string
+vm.swappiness -> int
+fs.file-max -> int
+```
+
+設定ファイルの型が一致していない場合
+```
+example1.conf
+endpoint = localhost:3000
+debug = 1234
+log.file = /var/log/console.log
+
+99-example.conf
+kernel.sysrq=`'`.|¥/;""?`
+
+20-extra.conf
+net.core.somaxconn = asdf
+
+10-custom.conf
+vm.swappiness = 10.1
+fs.file-max = 100000
+```
+以下のように表示されます
+```bash
+Error: キー 'debug' の値 '1234' はブール値ではありません。
+Error: キー 'kernel.sysrq' の値 '`'`.|¥/;""?`' は整数ではありません。
+Error: キー 'net.core.somaxconn' の値 'asdf' は浮動小数点数ではありません。
+Error: キー 'vm.swappiness' の値 '10.1' は整数ではありません。
+設定ファイルのパース中にエラーが発生しました: 設定ファイルにエラーがあります。
+```
+
+または、スキーマ(schema.txt)の定義でこのように定義されていない型を入力すると
+```
+例：schema.txt
+
+log.file -> #空文字
+endpoint -> asdf
+vm.swappiness ->'string' #クォートで囲む
+```
+
+以下のように表示されます
+```bash
+Error: キー 'log.file' のスキーマ型 '' はサポートされていません。
+Error: キー 'endpoint' のスキーマ型 'asdf' はサポートされていません。
+Error: キー 'vm.swappiness' のスキーマ型 ''string'' はサポートされていません。
+```
+
 
 ## 4096文字を超えるファイル読み込みテスト
 ![CleanShot 2024-10-10 at 17 05 45](https://github.com/user-attachments/assets/8a47572a-1c58-4f44-9f87-a232bbcc9ee0)
