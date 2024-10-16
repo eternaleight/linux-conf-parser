@@ -6,7 +6,7 @@ debug -> bool
 kernel.sysrq -> int
 log.name -> string
 kernel.domainname -> string
-net.core.somaxconn -> int
+net.core.somaxconn -> float
 kernel.panic -> string
-vm.swappiness -> int
+vm.swappiness -> string
 fs.file-max -> int

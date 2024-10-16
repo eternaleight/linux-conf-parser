@@ -43,25 +43,42 @@ pub fn load_schema(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
     Ok(schema)
 }
 
+/// 文字列が数値かどうかを確認
+fn is_numeric(s: &str) -> bool {
+    s.chars().all(|c| c.is_numeric())
+}
+
 /// 設定ファイルの内容をスキーマと照合して検証
 pub fn validate_against_schema(
     config_map: &FxHashMap<String, String>,
     schema: &FxHashMap<String, String>,
 ) -> Result<(), String> {
-    let mut errors = Vec::new(); // エラーを収集するベクター// let mut errors = vec![]; // こっちのが楽か
+    let mut errors = Vec::new();
 
     for (key, value) in config_map {
         if let Some(expected_type) = schema.get(key) {
-            // 値の型を検証
             match expected_type.as_str() {
+                // スキーマで"string"と定義されている場合、空でない文字列かを確認
+                // また、"true"、"false"、数字のみの文字列は無効とする
                 "string" => {
                     if value.is_empty() {
                         errors.push(format!(
-                            "Error: キー '{}' の値 '{}' は空の文字列です。",
+                            "\x1b[31mError: キー '{}' の値 '{}' は空の文字列です。\x1b[0m",
+                            key, value
+                        ));
+                    } else if value == "true" || value == "false" {
+                        errors.push(format!(
+                            "\x1b[31mError: キー '{}' の値 '{}' はブール値ではなく、文字列である必要があります。\x1b[0m",
+                            key, value
+                        ));
+                    } else if is_numeric(&value) {
+                        errors.push(format!(
+                            "\x1b[31mError: キー '{}' の値 '{}' は数値ではなく、文字列である必要があります。\x1b[0m",
                             key, value
                         ));
                     }
                 }
+                // スキーマで"bool"と定義されている場合、"true"か"false"かを確認
                 "bool" => {
                     if value != "true" && value != "false" {
                         errors.push(format!(
@@ -70,6 +87,7 @@ pub fn validate_against_schema(
                         ));
                     }
                 }
+                // スキーマで"int"と定義されている場合、整数にパースできるか確認
                 "int" => {
                     if value.parse::<i64>().is_err() {
                         errors.push(format!(
@@ -78,6 +96,16 @@ pub fn validate_against_schema(
                         ));
                     }
                 }
+                // スキーマで"float"と定義されている場合、浮動小数点数にパースできるか確認
+                "float" => {
+                    if value.parse::<f64>().is_err() {
+                        errors.push(format!(
+                            "\x1b[31mError: キー '{}' の値 '{}' は浮動小数点数ではありません。\x1b[0m",
+                            key, value
+                        ));
+                    }
+                }
+                // サポートされていない型
                 _ => {
                     errors.push(format!(
                         "\x1b[31mError: キー '{}' のスキーマ型 '{}' はサポートされていません。\x1b[0m",
@@ -94,8 +122,8 @@ pub fn validate_against_schema(
     }
 
     if errors.is_empty() {
-        Ok(()) // エラーがない場合は正常
+        Ok(())
     } else {
-        Err(errors.join("\n")) // エラーがある場合はすべてを連結して返す
+        Err(errors.join("\n"))
     }
 }

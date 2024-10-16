@@ -166,6 +166,7 @@ mod tests {
         key1 -> string
         key2 -> int
         key3 -> bool
+        key4 -> float
         "#;
         let schema_path = setup_test_schema("valid_schema.txt", schema_content);
         let result = load_schema(&schema_path);
@@ -175,6 +176,7 @@ mod tests {
         assert_eq!(schema.get("key1").unwrap(), "string");
         assert_eq!(schema.get("key2").unwrap(), "int");
         assert_eq!(schema.get("key3").unwrap(), "bool");
+        assert_eq!(schema.get("key4").unwrap(), "float");
 
         cleanup_test_files();
     }
@@ -183,10 +185,11 @@ mod tests {
     #[test]
     fn test_load_invalid_schema() {
         let schema_content = r#"
-        key1 -> string
-        invalid_format_line
-        key2 -> int
-        "#;
+    key1 -> string
+    invalid_format_line
+    key2 -> int
+    key3 -> float
+    "#;
         let schema_path = setup_test_schema("invalid_schema.txt", schema_content);
         let result = load_schema(&schema_path);
 
@@ -196,46 +199,50 @@ mod tests {
         let schema = result.unwrap();
         assert_eq!(schema.get("key1").unwrap(), "string");
         assert_eq!(schema.get("key2").unwrap(), "int");
+        assert_eq!(schema.get("key3").unwrap(), "float");
 
         cleanup_test_files();
     }
 
-    /// 設定ファイルの検証テスト（すべてが正しい場合）
+    /// 浮動小数点数を含む設定ファイルの検証テスト
     #[test]
-    fn test_validate_against_valid_schema() {
+    fn test_validate_against_valid_schema_with_float() {
         let mut config = FxHashMap::default();
-        config.insert("key1".to_string(), "value".to_string());
-        config.insert("key2".to_string(), "42".to_string());
-        config.insert("key3".to_string(), "true".to_string());
+        config.insert("key1".to_string(), "value".to_string()); // 正しい string
+        config.insert("key2".to_string(), "42".to_string()); // 正しい int
+        config.insert("key3".to_string(), "true".to_string()); // 正しい bool
+        config.insert("key4".to_string(), "3.14".to_string()); // 正しい float
 
         let mut schema = FxHashMap::default();
         schema.insert("key1".to_string(), "string".to_string());
         schema.insert("key2".to_string(), "int".to_string());
         schema.insert("key3".to_string(), "bool".to_string());
+        schema.insert("key4".to_string(), "float".to_string());
 
         let result = validate_against_schema(&config, &schema);
         assert!(result.is_ok(), "検証に成功する必要があります");
     }
 
-    /// 設定ファイルの検証テスト（型が一致しない場合）
+    /// 整数型が期待される設定に浮動小数点が含まれている場合の検証テスト
     #[test]
-    fn test_validate_against_invalid_schema() {
+    fn test_validate_int_with_float_value() {
         let mut config = FxHashMap::default();
-        config.insert("key1".to_string(), "value".to_string()); // 正しい
-        config.insert("key2".to_string(), "not_an_int".to_string()); // intのはずが文字列
-        config.insert("key3".to_string(), "not_a_bool".to_string()); // boolのはずが文字列
+        config.insert("key1".to_string(), "value".to_string()); // 正しい string
+        config.insert("key2".to_string(), "3.14".to_string()); // 不正な int (float が入っている)
+        config.insert("key3".to_string(), "true".to_string()); // 正しい bool
+        config.insert("key4".to_string(), "2.718".to_string()); // 正しい float
 
         let mut schema = FxHashMap::default();
         schema.insert("key1".to_string(), "string".to_string());
-        schema.insert("key2".to_string(), "int".to_string());
+        schema.insert("key2".to_string(), "int".to_string()); // key2 は整数でなければならない
         schema.insert("key3".to_string(), "bool".to_string());
+        schema.insert("key4".to_string(), "float".to_string());
 
         let result = validate_against_schema(&config, &schema);
         assert!(result.is_err(), "検証は失敗する必要があります");
 
         let errors = result.unwrap_err();
-        assert!(errors.contains("キー 'key2' の値 'not_an_int' は整数ではありません"));
-        assert!(errors.contains("キー 'key3' の値 'not_a_bool' はブール値ではありません"));
+        assert!(errors.contains("キー 'key2' の値 '3.14' は整数ではありません"));
     }
 
     /// スキーマに存在しないキーを含む設定ファイルの検証テスト
