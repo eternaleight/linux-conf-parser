@@ -427,8 +427,8 @@ Rustのテストランナーは複数のスレッドを使用して並列にテ�
 ```rust
 #[test]
 fn test_non_existent_file() {
-    let file_path = Path::new("non_existent.conf");
-    let result = parse_sysctl_conf(file_path);
+    let file_path: &Path = Path::new("non_existent.conf");
+    let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(file_path);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
@@ -445,12 +445,13 @@ fn test_non_existent_file() {
 #[test]
 #[should_panic(expected = "値が4096文字を超えています")]
 fn test_value_too_long() {
-    let long_value = "A".repeat(MAX_VALUE_LENGTH + 1);
-    let content = format!("long.key = {}", long_value);
-    let file_path = setup_test_file("long_value.conf", &content);
+    let long_value: String = "A".repeat(MAX_VALUE_LENGTH + 1);
+    let content: String = format!("long.key = {}", long_value);
+    let file_path: PathBuf = setup_test_file("long_value.conf", &content);
 
     // この関数呼び出しは panic を引き起こすことが期待されている
     let _ = parse_sysctl_conf(&file_path);
+    cleanup_test_files();
 }
 ```
 
@@ -462,13 +463,15 @@ fn test_value_too_long() {
 ```rust
 #[test]
 fn test_valid_conf_file() {
-    let content = "net.ipv4.tcp_syncookies = 1\nfs.file-max = 2097152";
-    let file_path = setup_test_file("valid.conf", content);
+    let content: &str = "net.ipv4.tcp_syncookies = 1\nfs.file-max = 2097152";
+    let file_path: PathBuf = setup_test_file("valid.conf", content);
 
-    let result = parse_sysctl_conf(&file_path);
+    let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(&file_path);
     assert!(result.is_ok(), "設定ファイルのパースに失敗しました");
 
-    let map = result.unwrap();
+    let map: FxHashMap<String, String> = result.unwrap();
+
+    // マップ全体を表示して、デバッグしやすくする
     println!("{:?}", map);
 
     assert_eq!(
@@ -493,22 +496,22 @@ fn test_valid_conf_file() {
 /// 再帰的なディレクトリ読み込みのテスト
 #[test]
 fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
-    let content1 = "net.ipv4.tcp_syncookies = 1";
-    let content2 = "fs.file-max = 2097152";
+    let content1: &str = "net.ipv4.tcp_syncookies = 1";
+    let content2: &str = "fs.file-max = 2097152";
 
     // ファイルをセットアップ
     setup_test_file("dir1/test1.conf", content1);
     setup_test_file("dir1/subdir/test2.conf", content2);
 
     // 再帰的にディレクトリを探索してパースする
-    let directories = ["test_data/dir1"];
+    let directories: [&str; 1] = ["test_data/dir1"];
 
     // スキーマファイルを読み込む
-    let schema_path = Path::new("schema.txt");
-    let schema = schema::load_schema(schema_path)?;
+    let schema_path: &Path = Path::new("schema.txt");
+    let schema: FxHashMap<String, String> = schema::load_schema(schema_path)?;
 
-    let mut result_map = FxHashMap::default();
-    let result = parse_all_sysctl_files(&directories, &schema, &mut result_map);
+    let mut result_map: FxHashMap<String, String> = FxHashMap::default();
+    let result: Result<(), Error> = parse_all_sysctl_files(&directories, &schema, &mut result_map);
 
     // パース結果をデバッグ表示
     println!("パース結果: {:?}", result_map);
@@ -538,14 +541,14 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
 ```rust
 #[test]
 fn test_load_valid_schema() {
-    let schema_content = r#"
+    let schema_content: &str = r#"
     key1 -> string
     key2 -> int
     key3 -> bool
     key4 -> float
     "#;
-    let schema_path = setup_test_schema("valid_schema.txt", schema_content);
-    let result = load_schema(&schema_path);
+    let schema_path: PathBuf = setup_test_schema("valid_schema.txt", schema_content);
+    let result: Result<FxHashMap<String, String>, Error> = load_schema(&schema_path);
     assert!(result.is_ok(), "スキーマファイルの読み込みに失敗しました");
 
     let schema = result.unwrap();
@@ -566,19 +569,19 @@ fn test_load_valid_schema() {
 ```rust
 #[test]
 fn test_load_invalid_schema() {
-    let schema_content = r#"
+    let schema_content: &str = r#"
     key1 -> string
     invalid_format_line
     key2 -> int
     key3 -> float
     "#;
-    let schema_path = setup_test_schema("invalid_schema.txt", schema_content);
-    let result = load_schema(&schema_path);
+    let schema_path: PathBuf = setup_test_schema("invalid_schema.txt", schema_content);
+    let result: Result<FxHashMap<String, String>, Error> = load_schema(&schema_path);
 
     // エラーメッセージが適切に表示され、結果がエラーになることを確認
     assert!(result.is_ok(), "不正な形式の行を無視しなければなりません");
 
-    let schema = result.unwrap();
+    let schema: FxHashMap<String, String> = result.unwrap();
     assert_eq!(schema.get("key1").unwrap(), "string");
     assert_eq!(schema.get("key2").unwrap(), "int");
     assert_eq!(schema.get("key3").unwrap(), "float");
@@ -595,19 +598,19 @@ fn test_load_invalid_schema() {
 ```rust
 #[test]
 fn test_validate_against_valid_schema_with_float() {
-    let mut config = FxHashMap::default();
+    let mut config: FxHashMap<String, String> = FxHashMap::default();
     config.insert("key1".to_string(), "value".to_string()); // 正しい string
     config.insert("key2".to_string(), "42".to_string()); // 正しい int
     config.insert("key3".to_string(), "true".to_string()); // 正しい bool
     config.insert("key4".to_string(), "3.14".to_string()); // 正しい float
 
-    let mut schema = FxHashMap::default();
+    let mut schema: FxHashMap<String, String> = FxHashMap::default();
     schema.insert("key1".to_string(), "string".to_string());
     schema.insert("key2".to_string(), "int".to_string());
     schema.insert("key3".to_string(), "bool".to_string());
     schema.insert("key4".to_string(), "float".to_string());
 
-    let result = validate_against_schema(&config, &schema);
+    let result: Result<(), String> = validate_against_schema(&config, &schema);
     assert!(result.is_ok(), "検証に成功する必要があります");
 }
 ```
@@ -620,17 +623,17 @@ fn test_validate_against_valid_schema_with_float() {
 ```rust
 #[test]
 fn test_validate_with_extra_key() {
-    let mut config = FxHashMap::default();
+    let mut config: FxHashMap<String, String> = FxHashMap::default();
     config.insert("key1".to_string(), "value".to_string());
     config.insert("extra_key".to_string(), "value".to_string()); // スキーマに存在しないキー
 
-    let mut schema = FxHashMap::default();
+    let mut schema: FxHashMap<String, String> = FxHashMap::default();
     schema.insert("key1".to_string(), "string".to_string());
 
-    let result = validate_against_schema(&config, &schema);
+    let result: Result<(), String> = validate_against_schema(&config, &schema);
     assert!(result.is_err(), "検証は失敗する必要があります");
 
-    let errors = result.unwrap_err();
+    let errors: String = result.unwrap_err();
     assert!(errors.contains("キー 'extra_key' はスキーマに存在しません"));
 }
 ```
@@ -643,7 +646,7 @@ fn test_validate_with_extra_key() {
 ```rust
 #[test]
 fn test_validate_mixed_invalid_types() {
-    let mut config = FxHashMap::default();
+    let mut config: FxHashMap<String, String> = FxHashMap::default();
 
     // 全て不正な値にする
     config.insert("key1".to_string(), "3.14".to_string()); // 不正な string (float が入っている)
@@ -664,11 +667,11 @@ fn test_validate_mixed_invalid_types() {
     schema.insert("key6".to_string(), "float".to_string()); // key6 は浮動小数点でなければならない
     schema.insert("key7".to_string(), "string".to_string()); // key7 は文字列でなければならない
 
-    let result = validate_against_schema(&config, &schema);
+    let result: Result<(), String> = validate_against_schema(&config, &schema);
 
     assert!(result.is_err(), "検証は失敗する必要があります");
 
-    let errors = result.unwrap_err();
+    let errors: String = result.unwrap_err();
 
     assert!(errors.contains("キー 'key1' の値 '3.14' は数値ではなく、文字列である必要があります。"));
     assert!(errors.contains("キー 'key2' の値 'value' は整数ではありません"));
