@@ -235,6 +235,7 @@ mod tests {
         config.insert("key4".to_string(), "123".to_string()); // 不正な bool (int が入っている)
         config.insert("key5".to_string(), "value".to_string()); // 不正な bool (string が入っている)
         config.insert("key6".to_string(), "true".to_string()); // 不正な float (bool が入っている)
+        config.insert("key7".to_string(), "true".to_string()); // 不正な string (bool が入っている)
 
         let mut schema = FxHashMap::default();
 
@@ -244,6 +245,7 @@ mod tests {
         schema.insert("key4".to_string(), "bool".to_string()); // key4 はブール値でなければならない
         schema.insert("key5".to_string(), "bool".to_string()); // key5 はブール値でなければならない
         schema.insert("key6".to_string(), "float".to_string()); // key6 は浮動小数点でなければならない
+        schema.insert("key7".to_string(), "string".to_string()); // key7 は文字列でなければならない
 
         let result = validate_against_schema(&config, &schema);
 
@@ -257,6 +259,7 @@ mod tests {
         assert!(errors.contains("キー 'key4' の値 '123' はブール値ではありません"));
         assert!(errors.contains("キー 'key5' の値 'value' はブール値ではありません"));
         assert!(errors.contains("キー 'key6' の値 'true' は浮動小数点数ではありません"));
+        assert!(errors.contains("キー 'key7' の値 'true' はブール値ではなく、文字列である必要があります。"));
     }
 
     /// スキーマに存在しないキーを含む設定ファイルの検証テスト
