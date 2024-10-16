@@ -385,9 +385,8 @@ File: "config/example2.conf"
 ```
 
 
-
 ## テスト仕様と使い方
-![CleanShot 2024-10-10 at 22 38 57](https://github.com/user-attachments/assets/34e50125-253a-4674-84f1-18268459fef9)
+![CleanShot 2024-10-16 at 20 37 50](https://github.com/user-attachments/assets/6d649b7a-9959-4875-8559-b8881a3e3e66)
 
 このプログラムには、複数のテストが用意されています。各テストでは、`sysctl.conf`形式の設定ファイルを解析し、特定のケースに対応した動作を確認しています。テストは、特定のエラーハンドリングやファイルの正しい解析が行われているかを確認するためのものです。
 
@@ -397,8 +396,24 @@ File: "config/example2.conf"
    テストは `cargo test` コマンドで実行します。テスト用に定義された関数が順次実行され、結果が表示されます。
 
    ```bash
-   cargo test
+   # テストを逐次実行したいのでこのコマンドで実行する
+   cargo test -- --test-threads=1
    ```
+
+**`cargo test`**:
+   - RustのビルドシステムであるCargoを使用して、プロジェクト内の全てのテストを実行するコマンドです。`cargo test`を実行すると、テスト対象の関数が実行され、結果が表示されます。
+
+**`--`**:
+   - `cargo test` コマンドに渡すオプションと、テストランナー（Rustのテスト実行エンジン）に渡すオプションを区別するための区切りです。これにより、後ろに続くオプションはテストランナーに渡されます。
+
+**`--test-threads=1`**:
+   - これはテストランナーに渡されるオプションで、テストを実行するスレッドの数を指定します。この例では、`1` つのスレッドを指定しているため、テストは並列に実行されず、順次実行されます。
+
+Rustのテストランナーは複数のスレッドを使用して並列にテストを実行しますが、`--test-threads=1` を指定することで、全てのテストを1つのスレッドで順次実行します。
+- テストが並列実行されると、データ競合やリソースの共有によって問題が発生する場合。
+- テストの実行順序が重要な場合。
+- 並行実行によってデバッグが難しくなる問題を回避したい場合。
+
 
 2. **各テストの動作**  
    テスト関数は、設定ファイルの内容に応じて、エラー処理や正常処理をテストします。以下で、各テストケースの概要を説明します。
@@ -421,8 +436,6 @@ fn test_non_existent_file() {
 }
 ```
 
-
-
 ### 2. `test_value_too_long`
 
 - **概要**: 設定ファイルの値が4096文字を超えた場合に、プログラムがパニックを発生させることを確認します。このテストは、システムの安全性を保持するために、特定の長さを超える設定値に対して厳格な制限を施すことの重要性を強調します。
@@ -440,8 +453,6 @@ fn test_value_too_long() {
     let _ = parse_sysctl_conf(&file_path);
 }
 ```
-
-
 
 ### 3. `test_valid_conf_file`
 
@@ -473,20 +484,21 @@ fn test_valid_conf_file() {
 }
 ```
 
-
-
 ### 4. `test_parse_all_sysctl_files`
-🔨作成中(WIP)
+
+- **概要**: 再帰的にディレクトリを探索し、`sysctl` 設定ファイルを正しく読み込んでパースするかを確認するテストです。複数のディレクトリ内に保存された設定ファイルを読み込み、それぞれの設定項目がスキーマに基づいて適切に処理されるかどうかを検証します。
+- **期待結果**: 各 `sysctl` 設定ファイルが再帰的にディレクトリ内から正しく読み込まれ、パースされた結果が `FxHashMap` に期待通りに格納されること。また、スキーマに基づいた検証が成功し、エラーなく結果が返されること。
 
 ```rust
+/// 再帰的なディレクトリ読み込みのテスト
 #[test]
 fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
     let content1 = "net.ipv4.tcp_syncookies = 1";
     let content2 = "fs.file-max = 2097152";
 
     // ファイルをセットアップ
-    let _ = setup_test_file("dir1/test1.conf", content1);
-    let _ = setup_test_file("dir1/subdir/test2.conf", content2);
+    setup_test_file("dir1/test1.conf", content1);
+    setup_test_file("dir1/subdir/test2.conf", content2);
 
     // 再帰的にディレクトリを探索してパースする
     let directories = ["test_data/dir1"];
@@ -495,21 +507,175 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
     let schema_path = Path::new("schema.txt");
     let schema = schema::load_schema(schema_path)?;
 
-    let result = parse_all_sysctl_files(&directories, &schema);
+    let mut result_map = FxHashMap::default();
+    let result = parse_all_sysctl_files(&directories, &schema, &mut result_map);
 
     // パース結果をデバッグ表示
-    println!("パース結果: {:?}", result);
+    println!("パース結果: {:?}", result_map);
 
     // パースが成功したことを確認
     assert!(result.is_ok(), "Sysctlファイルのパースに失敗しました");
 
+    // パース結果の検証
+    assert_eq!(
+        result_map.get("net.ipv4.tcp_syncookies"),
+        Some(&"1".to_string())
+    );
+    assert_eq!(result_map.get("fs.file-max"), Some(&"2097152".to_string()));
+
+    // テスト後のクリーンアップ
     cleanup_test_files();
 
     Ok(())
 }
 ```
 
+### 5. `test_load_valid_schema`
 
+- **概要**: 正常なスキーマファイルを読み込み、その内容が正しく解析されているかを確認するテストです。スキーマの各項目が期待通りのデータ型と対応しているかを検証します。
+- **期待結果**: スキーマが正しくロードされ、各キーに対応する型（`string`、`int`、`bool`、`float`）が `FxHashMap` に格納されていることを確認します。
+
+```rust
+#[test]
+fn test_load_valid_schema() {
+    let schema_content = r#"
+    key1 -> string
+    key2 -> int
+    key3 -> bool
+    key4 -> float
+    "#;
+    let schema_path = setup_test_schema("valid_schema.txt", schema_content);
+    let result = load_schema(&schema_path);
+    assert!(result.is_ok(), "スキーマファイルの読み込みに失敗しました");
+
+    let schema = result.unwrap();
+    assert_eq!(schema.get("key1").unwrap(), "string");
+    assert_eq!(schema.get("key2").unwrap(), "int");
+    assert_eq!(schema.get("key3").unwrap(), "bool");
+    assert_eq!(schema.get("key4").unwrap(), "float");
+
+    cleanup_test_files();
+}
+```
+
+### 6. `test_load_invalid_schema`
+
+- **概要**: 不正な形式を含むスキーマファイルを読み込み、エラーハンドリングが適切に行われるかを確認するテストです。不正な行があっても、残りのスキーマ項目が正しくロードされるかを検証します。
+- **期待結果**: スキーマファイル内の不正な行は無視され、他の正しい行が正しくパースされること。
+
+```rust
+#[test]
+fn test_load_invalid_schema() {
+    let schema_content = r#"
+    key1 -> string
+    invalid_format_line
+    key2 -> int
+    key3 -> float
+    "#;
+    let schema_path = setup_test_schema("invalid_schema.txt", schema_content);
+    let result = load_schema(&schema_path);
+
+    // エラーメッセージが適切に表示され、結果がエラーになることを確認
+    assert!(result.is_ok(), "不正な形式の行を無視しなければなりません");
+
+    let schema = result.unwrap();
+    assert_eq!(schema.get("key1").unwrap(), "string");
+    assert_eq!(schema.get("key2").unwrap(), "int");
+    assert_eq!(schema.get("key3").unwrap(), "float");
+
+    cleanup_test_files();
+}
+```
+
+### 7. `test_validate_against_valid_schema_with_float`
+
+- **概要**: 浮動小数点数を含む設定ファイルの内容が、スキーマに基づいて正しく検証されるかを確認するテストです。複数の異なるデータ型がスキーマに対して適切に処理されるかを検証します。
+- **期待結果**: 各設定項目（`string`、`int`、`bool`、`float`）がスキーマに基づいて正しく検証され、エラーが発生しないこと。
+
+```rust
+#[test]
+fn test_validate_against_valid_schema_with_float() {
+    let mut config = FxHashMap::default();
+    config.insert("key1".to_string(), "value".to_string()); // 正しい string
+    config.insert("key2".to_string(), "42".to_string()); // 正しい int
+    config.insert("key3".to_string(), "true".to_string()); // 正しい bool
+    config.insert("key4".to_string(), "3.14".to_string()); // 正しい float
+
+    let mut schema = FxHashMap::default();
+    schema.insert("key1".to_string(), "string".to_string());
+    schema.insert("key2".to_string(), "int".to_string());
+    schema.insert("key3".to_string(), "bool".to_string());
+    schema.insert("key4".to_string(), "float".to_string());
+
+    let result = validate_against_schema(&config, &schema);
+    assert!(result.is_ok(), "検証に成功する必要があります");
+}
+```
+
+### 8. `test_validate_with_extra_key`
+
+- **概要**: スキーマには定義されていない余分なキーが設定ファイルに含まれている場合、そのキーが適切に検出されるかを確認するテストです。余分なキーがエラーとして扱われるかを検証します。
+- **期待結果**: スキーマに存在しないキーが検出され、エラーメッセージが返されること。
+
+```rust
+#[test]
+fn test_validate_with_extra_key() {
+    let mut config = FxHashMap::default();
+    config.insert("key1".to_string(), "value".to_string());
+    config.insert("extra_key".to_string(), "value".to_string()); // スキーマに存在しないキー
+
+    let mut schema = FxHashMap::default();
+    schema.insert("key1".to_string(), "string".to_string());
+
+    let result = validate_against_schema(&config, &schema);
+    assert!(result.is_err(), "検証は失敗する必要があります");
+
+    let errors = result.unwrap_err();
+    assert!(errors.contains("キー 'extra_key' はスキーマに存在しません"));
+}
+```
+
+### 9. `test_validate_mixed_invalid_types`
+
+- **概要**: 無効なデータ型が複数含まれている設定ファイルが、スキーマに基づいて正しくエラーハンドリングされるかを確認するテストです。各項目がスキーマに準拠していない場合、適切なエラーメッセージが返されるかを検証します。
+- **期待結果**: 無効なデータ型に対して適切なエラーメッセージが表示され、検証が失敗すること。
+
+```rust
+#[test]
+fn test_validate_mixed_invalid_types() {
+    let mut config = FxHashMap::default();
+
+    // 全て不正な値にする
+    config.insert("key1".to_string(), "3.14".to_string()); // 不正な string (float が入っている)
+    config.insert("key2".to_string(), "value".to_string()); // 不正な int (string が入っている)
+    config.insert("key3".to_string(), "3.14".to_string()); // 不正な int (float が入っている)
+    config.insert("key4".to_string(), "123".to_string()); // 不正な bool (int が入っている)
+    config.insert("key5".to_string(), "value".to_string()); // 不正な bool (string が入っている)
+    config.insert("key6".to_string(), "true".to_string()); // 不正な float (bool が入っている)
+
+    let mut schema = FxHashMap::default();
+
+    schema.insert("key1".to_string(), "string".to_string()); // key1 は文字列でなければならない
+    schema.insert("key2".to_string(), "int".to_string()); // key2 は整数でなければならない
+    schema.insert("key3".to_string(), "int".to_string()); // key3 は整数でなければならない
+    schema.insert("key4".to_string(), "bool".to_string()); // key4 はブール値でなければならない
+    schema.insert("key5".to_string(), "bool".to_string()); // key5 はブール値でなければならない
+    schema.insert("key6".to_string(), "float".to_string()); // key6 は浮動小数点でなければならない
+
+    let result = validate_against_schema(&config, &schema);
+
+    assert!(result.is_err(), "検証は失敗する必要があります");
+
+    let errors = result.unwrap_err();
+
+    assert!(errors.contains("キー 'key1' の値 '3.14' は数値ではなく、文字列である必要があります。"));
+    assert!(errors.contains("キー 'key2' の値 'value' は整数ではありません"));
+    assert!(errors.contains("キー 'key3' の値 '3.14' は整数ではありません"));
+    assert!(errors.contains("キー 'key4' の値 '123' はブール値ではありません"));
+    assert!(errors.contains("キー 'key5' の値 'value' はブール値ではありません"));
+    assert!(errors.contains("キー 'key6' の値 'true' は浮動小数点数ではありません"));
+}
+```
 
 ## テスト関数の使い方
 
@@ -518,16 +684,23 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
 
 ## テスト結果の確認方法
 
-テストを実行すると、各テストケースが順番に実行されます。テストが成功すると "ok" が表示され、失敗するとエラーメッセージが表示されます。例えば、以下のような出力が得られます：
+テストを実行すると、各テストケースが順番に実行されます。テストが成功すると "ok" が表示され、失敗するとエラーメッセージが表示されます。例えば、以下のような出力が得られます。
+
+### 実行例
 
 ```bash
-running 4 tests
+running 9 tests
 test test_non_existent_file ... ok
-test test_valid_conf_file ... ok
-test test_value_too_long ... ok
 test test_parse_all_sysctl_files ... ok
+test test_valid_conf_file ... ok
+test test_value_too_long - should panic ... ok
+test tests::test_load_invalid_schema ... ok
+test tests::test_load_valid_schema ... ok
+test tests::test_validate_against_valid_schema_with_float ... ok
+test tests::test_validate_mixed_invalid_types ... ok
+test tests::test_validate_with_extra_key ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 ```
 
 各テストが成功すれば問題なく動作しています。
