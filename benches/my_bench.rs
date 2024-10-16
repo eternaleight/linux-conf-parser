@@ -55,6 +55,7 @@ macro_rules! create_bench {
 mod benchmarks {
     use super::*;
     use linux_conf_parser::core::{directory_parser, file_parser, schema};
+    use rustc_hash::FxHashMap;
     use std::path::Path;
 
     // 既存のベンチマーク
@@ -75,8 +76,9 @@ mod benchmarks {
         let schema_path = Path::new("schema.txt");
         let schema = schema::load_schema(&schema_path).unwrap(); // スキーマを読み込む
 
-        // directories と schema の両方を渡す
-        directory_parser::parse_all_sysctl_files(&directories, &schema).unwrap();
+        let mut result_map = FxHashMap::default();
+
+        directory_parser::parse_all_sysctl_files(&directories, &schema, &mut result_map).unwrap();
     });
 
     create_bench!(bench_empty_conf_file, || {
