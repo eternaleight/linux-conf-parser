@@ -223,26 +223,40 @@ mod tests {
         assert!(result.is_ok(), "検証に成功する必要があります");
     }
 
-    /// 整数型が期待される設定に浮動小数点が含まれている場合の検証テスト
+    /// 不正な型（整数に浮動小数点や文字列、ブールに文字列）が含まれている場合の検証テスト
     #[test]
-    fn test_validate_int_with_float_value() {
+    fn test_validate_mixed_invalid_types() {
         let mut config = FxHashMap::default();
-        config.insert("key1".to_string(), "value".to_string()); // 正しい string
-        config.insert("key2".to_string(), "3.14".to_string()); // 不正な int (float が入っている)
-        config.insert("key3".to_string(), "true".to_string()); // 正しい bool
-        config.insert("key4".to_string(), "2.718".to_string()); // 正しい float
+
+        // 全て不正な値にする
+        config.insert("key1".to_string(), "3.14".to_string()); // 不正な string (float が入っている)
+        config.insert("key2".to_string(), "value".to_string()); // 不正な int (string が入っている)
+        config.insert("key3".to_string(), "3.14".to_string()); // 不正な int (float が入っている)
+        config.insert("key4".to_string(), "123".to_string()); // 不正な bool (int が入っている)
+        config.insert("key5".to_string(), "value".to_string()); // 不正な bool (string が入っている)
+        config.insert("key6".to_string(), "true".to_string()); // 不正な float (bool が入っている)
 
         let mut schema = FxHashMap::default();
-        schema.insert("key1".to_string(), "string".to_string());
+
+        schema.insert("key1".to_string(), "string".to_string()); // key1 は文字列でなければならない
         schema.insert("key2".to_string(), "int".to_string()); // key2 は整数でなければならない
-        schema.insert("key3".to_string(), "bool".to_string());
-        schema.insert("key4".to_string(), "float".to_string());
+        schema.insert("key3".to_string(), "int".to_string()); // key3 は整数でなければならない
+        schema.insert("key4".to_string(), "bool".to_string()); // key4 はブール値でなければならない
+        schema.insert("key5".to_string(), "bool".to_string()); // key5 はブール値でなければならない
+        schema.insert("key6".to_string(), "float".to_string()); // key6 は浮動小数点でなければならない
 
         let result = validate_against_schema(&config, &schema);
+
         assert!(result.is_err(), "検証は失敗する必要があります");
 
         let errors = result.unwrap_err();
-        assert!(errors.contains("キー 'key2' の値 '3.14' は整数ではありません"));
+
+        assert!(errors.contains("キー 'key1' の値 '3.14' は数値ではなく、文字列である必要があります。"));
+        assert!(errors.contains("キー 'key2' の値 'value' は整数ではありません"));
+        assert!(errors.contains("キー 'key3' の値 '3.14' は整数ではありません"));
+        assert!(errors.contains("キー 'key4' の値 '123' はブール値ではありません"));
+        assert!(errors.contains("キー 'key5' の値 'value' はブール値ではありません"));
+        assert!(errors.contains("キー 'key6' の値 'true' は浮動小数点数ではありません"));
     }
 
     /// スキーマに存在しないキーを含む設定ファイルの検証テスト
