@@ -16,10 +16,10 @@ pub fn validate_and_parse_sysctl(
     load_schema_fn: fn(&Path) -> io::Result<FxHashMap<String, String>>,
     result_map: &mut FxHashMap<String, String>,
 ) -> io::Result<()> {
-    let schema_path = Path::new(schema_file);
+    let schema_path: &Path = Path::new(schema_file);
 
     // スキーマファイルを読み込む
-    let schema = match load_schema_fn(schema_path) {
+    let schema: FxHashMap<String, String> = match load_schema_fn(schema_path) {
         Ok(schema) => schema,
         Err(e) => {
             eprintln!("スキーマファイルの読み込みに失敗しました: {}", e);

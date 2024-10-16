@@ -26,18 +26,19 @@ pub fn display_json_map(map: &FxHashMap<String, String>) {
         let key_parts: Vec<&str> = key.split('.').collect();
         if key_parts.len() > 1 {
             // ネストされたキーがある場合
-            let root_key = key_parts[0];
-            let nested_key = key_parts[1..].join(".");
+            let root_key: &str = key_parts[0];
+            let nested_key: String = key_parts[1..].join(".");
 
             if let Some(entry) = json_map.get_mut(root_key) {
                 if entry.is_object() {
                     // 既存のルートキーにネストされた値を追加
-                    let entry_map = entry.as_object_mut().unwrap();
+                    let entry_map: &mut serde_json::Map<String, Value> =
+                        entry.as_object_mut().unwrap();
                     entry_map.insert(nested_key.to_string(), json!(value));
                 }
             } else {
                 // 新しいネストされたキーを作成
-                let mut nested_map = FxHashMap::default();
+                let mut nested_map: FxHashMap<String, String> = FxHashMap::default();
                 nested_map.insert(nested_key.to_string(), value.clone());
                 json_map.insert(root_key.to_string(), json!(nested_map));
             }
@@ -48,6 +49,6 @@ pub fn display_json_map(map: &FxHashMap<String, String>) {
     }
 
     // JSON形式に変換してインデント付きで出力
-    let json_output = serde_json::to_string_pretty(&json!(json_map)).unwrap();
+    let json_output: String = serde_json::to_string_pretty(&json!(json_map)).unwrap();
     println!("{}", json_output);
 }

@@ -1,11 +1,11 @@
 use rustc_hash::FxHashMap;
-use std::fs;
-use std::io::{self, BufRead};
+use std::fs::{self, File};
+use std::io::{self, BufRead, BufReader, Error};
 use std::path::Path;
 
 /// スキーマファイルを読み込み、キーと型のペアを返す
 pub fn load_schema(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
-    let file = fs::File::open(file_path).map_err(|e| {
+    let file: fs::File = fs::File::open(file_path).map_err(|e: Error| {
         eprintln!(
             "Error: スキーマファイル '{}' を開く際にエラーが発生しました: {}",
             file_path.display(),
@@ -13,11 +13,11 @@ pub fn load_schema(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
         );
         e
     })?;
-    let reader = io::BufReader::new(file);
-    let mut schema = FxHashMap::default();
+    let reader: BufReader<File> = io::BufReader::new(file);
+    let mut schema: FxHashMap<String, String> = FxHashMap::default();
 
     for line in reader.lines() {
-        let line = line.map_err(|e| {
+        let line: String = line.map_err(|e: Error| {
             eprintln!(
                 "Error: スキーマファイル '{}' の読み込み中にエラーが発生しました: {}",
                 file_path.display(),
@@ -25,7 +25,7 @@ pub fn load_schema(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
             );
             e
         })?;
-        let trimmed = line.trim();
+        let trimmed: &str = line.trim();
 
         // 空行やコメント行を無視
         if trimmed.is_empty() || trimmed.starts_with('#') {
@@ -34,8 +34,8 @@ pub fn load_schema(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
 
         // "->" で分割してキーと型を抽出
         if let Some((key, value_type)) = trimmed.split_once("->") {
-            let key = key.trim().to_string();
-            let value_type = value_type.trim().to_string();
+            let key: String = key.trim().to_string();
+            let value_type: String = value_type.trim().to_string();
             schema.insert(key, value_type);
         }
     }
@@ -46,7 +46,7 @@ pub fn load_schema(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
 /// 数値かどうかを判定するヘルパー関数
 fn is_numeric(value: &str) -> bool {
     // 文字列が数値かどうかを判定するための正規表現
-    let re = regex::Regex::new(r"^-?\d+(\.\d+)?$").unwrap();
+    let re: regex::Regex = regex::Regex::new(r"^-?\d+(\.\d+)?$").unwrap();
     re.is_match(value)
 }
 
@@ -55,7 +55,7 @@ pub fn validate_against_schema(
     config_map: &FxHashMap<String, String>,
     schema: &FxHashMap<String, String>,
 ) -> Result<(), String> {
-    let mut errors = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
 
     for (key, value) in config_map {
         if let Some(expected_type) = schema.get(key) {
@@ -89,21 +89,21 @@ pub fn validate_against_schema(
 /// 文字列の検証
 fn validate_string(key: &str, value: &str, errors: &mut Vec<String>) {
     if value.is_empty() {
-        let error_message = format!(
+        let error_message: String = format!(
             "\x1b[31mError: キー '{}' の値 '{}' は空の文字列です。\x1b[0m",
             key, value
         );
         // println!("Generated Error: {}", error_message); // デバッグ出力
         errors.push(error_message);
     } else if value == "true" || value == "false" {
-        let error_message = format!(
+        let error_message: String = format!(
             "\x1b[31mError: キー '{}' の値 '{}' はブール値ではなく、文字列である必要があります。\x1b[0m",
             key, value
         );
         // println!("Generated Error: {}", error_message); // デバッグ出力
         errors.push(error_message);
     } else if is_numeric(value) {
-        let error_message = format!(
+        let error_message: String = format!(
             "\x1b[31mError: キー '{}' の値 '{}' は数値ではなく、文字列である必要があります。\x1b[0m",
             key, value
         );

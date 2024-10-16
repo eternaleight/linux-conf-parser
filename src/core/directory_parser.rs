@@ -4,6 +4,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use std::fs;
 use std::io;
 use std::path::Path;
+use std::path::PathBuf;
 
 use super::schema::validate_against_schema;
 
@@ -12,11 +13,10 @@ pub fn parse_all_sysctl_files(
     schema: &FxHashMap<String, String>,
     result_map: &mut FxHashMap<String, String>,
 ) -> io::Result<()> {
-    let mut parsed_files = FxHashSet::default();
-    let mut all_errors = Vec::new(); // 全てのエラーを収集
-
+    let mut parsed_files: FxHashSet<String> = FxHashSet::default();
+    let mut all_errors: Vec<String> = Vec::new(); // 全てのエラーを収集
     for dir in directories {
-        let path = Path::new(dir);
+        let path: &Path = Path::new(dir);
         if !path.is_dir() {
             eprintln!(
                 "Error: 指定されたディレクトリ '{}' が存在しません。",
@@ -57,7 +57,7 @@ fn parse_sysctl_dir(
     parsed_files: &mut FxHashSet<String>,
     result_map: &mut FxHashMap<String, String>,
 ) -> io::Result<()> {
-    let entries = fs::read_dir(path).map_err(|e| {
+    let entries: fs::ReadDir = fs::read_dir(path).map_err(|e| {
         eprintln!(
             "Error: ディレクトリ '{}' の読み込みに失敗しました: {}",
             path.display(),
@@ -67,14 +67,14 @@ fn parse_sysctl_dir(
     })?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| {
+        let entry: fs::DirEntry = entry.map_err(|e| {
             eprintln!(
                 "Error: ディレクトリ内のエントリへのアクセスに失敗しました: {}",
                 e
             );
             e
         })?;
-        let path = entry.path();
+        let path: PathBuf = entry.path();
 
         // ファイルのパスを文字列に変換
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("conf") {
@@ -93,7 +93,7 @@ fn parse_conf_file(
     parsed_files: &mut FxHashSet<String>,
     result_map: &mut FxHashMap<String, String>,
 ) -> io::Result<()> {
-    let path_str = path.to_string_lossy().to_string();
+    let path_str: String = path.to_string_lossy().to_string();
 
     if parsed_files.contains(&path_str) {
         // 既にパース済みならスキップ

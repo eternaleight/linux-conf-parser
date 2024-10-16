@@ -24,7 +24,7 @@ fn main() -> io::Result<()> {
     let mut result_map: FxHashMap<String, String> = FxHashMap::default();
 
     // スキーマ検証とSysctlファイルのパースを実行
-    let result = validate_and_parse_sysctl(
+    let result: Result<(), io::Error> = validate_and_parse_sysctl(
         "schema.txt",
         &directories,
         directory_parser::parse_all_sysctl_files,
