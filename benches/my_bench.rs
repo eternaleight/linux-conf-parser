@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use test::Bencher;
 
 fn setup_test_file(file_name: &str, content: &str) -> PathBuf {
-    let test_dir = PathBuf::from("test_data");
-    let file_path = test_dir.join(file_name);
+    let test_dir: PathBuf = PathBuf::from("test_data");
+    let file_path: PathBuf = test_dir.join(file_name);
 
     // ファイルを含むディレクトリ全体を再帰的に作成
     if let Some(parent_dir) = file_path.parent() {
@@ -21,7 +21,7 @@ fn setup_test_file(file_name: &str, content: &str) -> PathBuf {
     }
 
     // ファイルを作成して内容を書き込む
-    let mut file = File::create(&file_path).unwrap();
+    let mut file: File = File::create(&file_path).unwrap();
     file.write_all(content.as_bytes()).unwrap();
     file.flush().unwrap(); // 明示的にフラッシュして、データを確実にディスクに書き込む
 
