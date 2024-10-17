@@ -178,7 +178,6 @@ let directories = [
     "/usr/local/lib/sysctl.d",
     "/usr/lib/sysctl.d",
     "/lib/sysctl.d",
-    "/etc"
 ];
 ```
 
@@ -206,7 +205,6 @@ let directories = [
            "/usr/local/lib/sysctl.d",
            "/usr/lib/sysctl.d",
            "/lib/sysctl.d",
-           "/etc",
        ];
    ...
    
