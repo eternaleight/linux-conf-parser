@@ -5,11 +5,11 @@
 |:--:|
 | cargo runコマンド（設定ファイルをJSON形式で出力し、パース結果、型の検証結果を表示）|
 
-| ![CleanShot 2024-10-17 at 15 10 15](https://github.com/user-attachments/assets/82b9813e-4e11-4985-8e6e-53dc1fd7d28b) |
+| ![CleanShot 2024-10-17 at 15 54 31](https://github.com/user-attachments/assets/c9bac18e-0e7b-4917-b129-c9bdad16f7f5) |
 |:--:|
 | cargo run outputコマンド（設定ファイルを元に、空の型定義ファイル `output.txt` を作成）|
 
-| ![CleanShot 2024-10-17 at 13 04 35](https://github.com/user-attachments/assets/97293652-09d8-4c24-8aec-590c689f96b4) |
+| ![CleanShot 2024-10-17 at 15 57 47](https://github.com/user-attachments/assets/135e5a60-1027-4560-9b5d-4cd2fb622a75) |
 |:--:|
 |linux-conf-parserコマンド (cargo runと機能は同じ、バイナリで実行)|
 
@@ -222,8 +222,7 @@ let directories = [
 - 設定値が4096文字を超える場合、警告が表示され、その行は無視されます。
 
 ## 型定義ファイルの作成と検証
-![CleanShot 2024-10-17 at 12 49 18](https://github.com/user-attachments/assets/d78f91d4-c6c9-4379-b87b-61135817e435)
-
+![CleanShot 2024-10-17 at 15 54 31](https://github.com/user-attachments/assets/61d39e9a-7ab0-489e-b298-e9830dee7bb0)
 
 ### `cargo run output` で空の型定義ファイルを作成
 
@@ -302,10 +301,10 @@ fs.file-max = 100000
 以下のように表示されます
 ### エラーメッセージ例：
 ```bash
-Error: キー 'debug' の値 '1234' はブール値ではありません。
-Error: キー 'kernel.sysrq' の値 '`'`.|¥/;""?`' は整数ではありません。
-Error: キー 'net.ipv4.tcp_rmem' の値 'asdf' は浮動小数点数ではありません。
-Error: キー 'vm.swappiness' の値 '10.1' は整数ではありません。
+Error: キー 'debug' の値 '1234' の型が一致しません。期待される型は 'bool'
+Error: キー 'kernel.sysrq' の値 '`'`.|¥/;""?`' の型が一致しません。期待される型は 'int'
+Error: キー 'net.ipv4.tcp_rmem' の値 'asdf' の型が一致しません。期待される型は 'float'
+Error: キー 'vm.swappiness' の値 '10.1' の型が一致しません。期待される型は 'int'
 設定ファイルのパース中にエラーが発生しました: 設定ファイルにエラーがあります。
 ```
 
@@ -717,21 +716,13 @@ fn test_validate_mixed_invalid_types() {
 
     let errors: String = result.unwrap_err();
 
-    assert!(errors.contains(
-        "Error: キー 'key1' の値 '3.14' の型が一致しません。期待される型は 'string'"
-    ));
-    assert!(errors
-        .contains("Error: キー 'key2' の値 'value' の型が一致しません。期待される型は 'int'"));
-    assert!(errors
-        .contains("Error: キー 'key3' の値 '3.14' の型が一致しません。期待される型は 'int'"));
-    assert!(errors
-        .contains("Error: キー 'key4' の値 '123' の型が一致しません。期待される型は 'bool'"));
-    assert!(errors
-        .contains("Error: キー 'key5' の値 'value' の型が一致しません。期待される型は 'bool'"));
+    assert!(errors.contains("Error: キー 'key1' の値 '3.14' の型が一致しません。期待される型は 'string'"));
+    assert!(errors.contains("Error: キー 'key2' の値 'value' の型が一致しません。期待される型は 'int'"));
+    assert!(errors.contains("Error: キー 'key3' の値 '3.14' の型が一致しません。期待される型は 'int'"));
+    assert!(errors.contains("Error: キー 'key4' の値 '123' の型が一致しません。期待される型は 'bool'"));
+    assert!(errors.contains("Error: キー 'key5' の値 'value' の型が一致しません。期待される型は 'bool'"));
     assert!(errors.contains("Error: キー 'key6' の値 'true' の型が一致しません。期待される型は 'float'"));
-    assert!(errors.contains(
-        "Error: キー 'key7' の値 'true' の型が一致しません。期待される型は 'string'"
-    ));
+    assert!(errors.contains("Error: キー 'key7' の値 'true' の型が一致しません。期待される型は 'string'"));
 }
 ```
 
