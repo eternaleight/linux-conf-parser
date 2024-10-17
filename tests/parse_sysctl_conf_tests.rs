@@ -237,7 +237,7 @@ mod tests {
         config.insert("key6".to_string(), "true".to_string()); // 不正な float (bool が入っている)
         config.insert("key7".to_string(), "true".to_string()); // 不正な string (bool が入っている)
 
-        let mut schema = FxHashMap::default();
+        let mut schema: FxHashMap<String, String> = FxHashMap::default();
 
         schema.insert("key1".to_string(), "string".to_string()); // key1 は文字列でなければならない
         schema.insert("key2".to_string(), "int".to_string()); // key2 は整数でなければならない
@@ -253,16 +253,22 @@ mod tests {
 
         let errors: String = result.unwrap_err();
 
-        assert!(
-            errors.contains("キー 'key1' の値 '3.14' は数値ではなく、文字列である必要があります。")
-        );
-        assert!(errors.contains("キー 'key2' の値 'value' は整数ではありません"));
-        assert!(errors.contains("キー 'key3' の値 '3.14' は整数ではありません"));
-        assert!(errors.contains("キー 'key4' の値 '123' はブール値ではありません"));
-        assert!(errors.contains("キー 'key5' の値 'value' はブール値ではありません"));
-        assert!(errors.contains("キー 'key6' の値 'true' は浮動小数点数ではありません"));
+        assert!(errors.contains(
+            "Error: キー 'key1' の値 '3.14' の型が一致しません。期待される型は 'string'"
+        ));
         assert!(errors
-            .contains("キー 'key7' の値 'true' はブール値ではなく、文字列である必要があります。"));
+            .contains("Error: キー 'key2' の値 'value' の型が一致しません。期待される型は 'int'"));
+        assert!(errors
+            .contains("Error: キー 'key3' の値 '3.14' の型が一致しません。期待される型は 'int'"));
+        assert!(errors
+            .contains("Error: キー 'key4' の値 '123' の型が一致しません。期待される型は 'bool'"));
+        assert!(errors
+            .contains("Error: キー 'key5' の値 'value' の型が一致しません。期待される型は 'bool'"));
+        assert!(errors
+            .contains("Error: キー 'key6' の値 'true' の型が一致しません。期待される型は 'float'"));
+        assert!(errors.contains(
+            "Error: キー 'key7' の値 'true' の型が一致しません。期待される型は 'string'"
+        ));
     }
 
     /// スキーマに存在しないキーを含む設定ファイルの検証テスト

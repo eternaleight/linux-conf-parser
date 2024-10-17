@@ -60,10 +60,10 @@ pub fn validate_against_schema(
     for (key, value) in config_map {
         if let Some(expected_type) = schema.get(key) {
             match expected_type.as_str() {
-                "string" => validate_string(key, value, &mut errors),
-                "bool" => validate_bool(key, value, &mut errors),
-                "int" => validate_int(key, value, &mut errors),
-                "float" => validate_float(key, value, &mut errors),
+                "string" => validate_string(key, value, expected_type, &mut errors),
+                "bool" => validate_bool(key, value, expected_type, &mut errors),
+                "int" => validate_int(key, value, expected_type, &mut errors),
+                "float" => validate_float(key, value, expected_type, &mut errors),
                 _ => {
                     errors.push(format!(
                         "\x1b[31mError: キー '{}' のスキーマ型 '{}' はサポートされていません。\x1b[0m",
@@ -87,58 +87,41 @@ pub fn validate_against_schema(
 }
 
 /// 文字列の検証
-fn validate_string(key: &str, value: &str, errors: &mut Vec<String>) {
-    if value.is_empty() {
-        let error_message: String = format!(
-            "\x1b[31mError: キー '{}' の値 '{}' は空の文字列です。\x1b[0m",
-            key, value
-        );
-        // println!("Generated Error: {}", error_message); // デバッグ出力
-        errors.push(error_message);
-    } else if value == "true" || value == "false" {
-        let error_message: String = format!(
-            "\x1b[31mError: キー '{}' の値 '{}' はブール値ではなく、文字列である必要があります。\x1b[0m",
-            key, value
-        );
-        // println!("Generated Error: {}", error_message); // デバッグ出力
-        errors.push(error_message);
-    } else if is_numeric(value) {
-        let error_message: String = format!(
-            "\x1b[31mError: キー '{}' の値 '{}' は数値ではなく、文字列である必要があります。\x1b[0m",
-            key, value
-        );
-        // println!("Generated Error: {}", error_message);  // デバッグ出力
-        errors.push(error_message);
+fn validate_string(key: &str, value: &str, expected_type: &str, errors: &mut Vec<String>) {
+    if value.is_empty() || value == "true" || value == "false" || is_numeric(value) {
+        errors.push(format!(
+            "\x1b[31mError: キー '{}' の値 '{}' の型が一致しません。期待される型は '{}'\x1b[0m",
+            key, value, expected_type
+        ));
     }
 }
 
 /// ブール値の検証
-fn validate_bool(key: &str, value: &str, errors: &mut Vec<String>) {
+fn validate_bool(key: &str, value: &str, expected_type: &str, errors: &mut Vec<String>) {
     if value != "true" && value != "false" {
         errors.push(format!(
-            "\x1b[31mError: キー '{}' の値 '{}' はブール値ではありません。\x1b[0m",
-            key, value
+            "\x1b[31mError: キー '{}' の値 '{}' の型が一致しません。期待される型は '{}'\x1b[0m",
+            key, value, expected_type
         ));
     }
 }
 
 /// 整数の検証
-fn validate_int(key: &str, value: &str, errors: &mut Vec<String>) {
-    // 小数点が含まれているかチェックし、整数としてパースできるか確認
+fn validate_int(key: &str, value: &str, expected_type: &str, errors: &mut Vec<String>) {
     if value.contains('.') || value.parse::<i64>().is_err() {
         errors.push(format!(
-            "\x1b[31mError: キー '{}' の値 '{}' は整数ではありません。\x1b[0m",
-            key, value
+            "\x1b[31mError: キー '{}' の値 '{}' の型が一致しません。期待される型は '{}'\x1b[0m",
+            key, value, expected_type
         ));
     }
 }
 
 /// 浮動小数点数の検証
-fn validate_float(key: &str, value: &str, errors: &mut Vec<String>) {
+fn validate_float(key: &str, value: &str, expected_type: &str, errors: &mut Vec<String>) {
     if value.parse::<f64>().is_err() {
         errors.push(format!(
-            "\x1b[31mError: キー '{}' の値 '{}' は浮動小数点数ではありません。\x1b[0m",
-            key, value
+            "\x1b[31mError: キー '{}' の値 '{}' の型が一致しません。期待される型は '{}'\x1b[0m",
+            key, value, expected_type
         ));
     }
 }
