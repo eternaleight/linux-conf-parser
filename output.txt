@@ -6,7 +6,7 @@ debug ->
 kernel.sysrq ->
 log.name ->
 kernel.domainname ->
-net.core.somaxconn ->
+net.ipv4.tcp_rmem ->
 kernel.panic ->
 vm.swappiness ->
 fs.file-max ->

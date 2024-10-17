@@ -1,11 +1,17 @@
 # Linux sysctl.confパーサ (設定ファイルパーサ)
-🔨作成中(WIP)
 
-![CleanShot 2024-10-14 at 02 44 47](https://github.com/user-attachments/assets/d05ac8b0-37eb-42cd-b605-51919885eacd)
-![CleanShot 2024-10-16 at 15 08 39](https://github.com/user-attachments/assets/e9762f54-5161-41d3-a480-e88c6b52a076)
+| ![CleanShot 2024-10-14 at 02 44 47](https://github.com/user-attachments/assets/d05ac8b0-37eb-42cd-b605-51919885eacd) |
+|:--:|
+| 設定ファイルをJSON形式で出力し、パース結果、型の検証結果を表示 |
 
+| ![CleanShot 2024-10-17 at 13 04 35](https://github.com/user-attachments/assets/97293652-09d8-4c24-8aec-590c689f96b4) |
+|:--:|
+|linux-conf-parserコマンド (cargo runと機能は同じ、バイナリで実行、型が不一致時の挙動)|
+
+### このRustプログラムについて
 
 このRustプログラムは、`sysctl.conf`形式の設定ファイルを解析し、ネストされたキーと値のペアを`FxHashMap`に格納するパーサです。指定されたディレクトリを再帰的に探索し、`.conf`ファイルを読み込んで解析します。コメント行や空行を無視し、特定のエラーハンドリングにも対応しています。
+型定義ファイルを作成し、それに基づいて設定ファイルのキーと値の型を検証することも可能です。これにより、設定ファイルの内容が期待されるデータ型と一致しているかを確認し、不正な値が含まれている場合にはエラーメッセージを表示します。
 
 ## 機能
 
@@ -14,6 +20,16 @@
 - **コメント行や空行を無視**: `#`や`;`で始まるコメント行や空行は無視されます。
 - **再帰的にディレクトリ内の`.conf`ファイルを解析**: 指定されたディレクトリ内の`.conf`ファイルを再帰的に読み込みます。
 - **エラーハンドリング**: 行の先頭に`-`がある場合、その行で発生したエラーを無視し、それ以外のエラーは`stderr`に出力されます。
+- **型定義ファイルの作成と検証**: 空の型定義ファイルを生成し、設定ファイルの各キーと値の型を定義します（各設定項目のstring型 String, int型 i64, bool型 bool, float型 f64を指定します）。定義された型に基づいて、設定ファイルの内容が正しいかどうかをチェック。
+```bash
+型定義ファイルの作成例
+例：schema.txt
+
+log.file -> string
+net.ipv4.tcp_syncookies -> int
+debug -> bool
+net.ipv4.tcp_rmem -> float
+```
 
 
 ### 開発用ディレクトリとファイルの説明
@@ -94,6 +110,7 @@ key3.subkey1.subkey2=value3
 cargo run
 ```
 
+
 実行すると、指定された`config`ディレクトリ内のすべての`.conf`ファイルが再帰的に処理され、それぞれのファイルごとに以下のような形式で出力されます。
 
 ```
@@ -105,6 +122,26 @@ File: "config/example1.conf"
     "file": "/var/log/console.log"
   }
 }
+```
+
+#### 2.2 `linux-conf-parser` コマンドでの実行（バイナリで実行、処理速度は速い、コード変更時にコンパイル必要）
+
+バイナリとしてインストールした `linux-conf-parser` コマンドを使用して、同様の処理を実行できます。バイナリは、事前に次のコマンドを使用してグローバルにインストールする必要があります。
+
+このコマンドは、自動的にビルドプロセス(` cargo build --release `)も含まれるため、別途 `cargo build --release` を実行する必要はありません。
+```bash
+cargo install --path .
+```
+
+インストールが完了したら、以下のコマンドでプログラムを実行します。
+
+```bash
+linux-conf-parser
+```
+
+コード変更などをした場合は、再度このコマンドを入力してコンパイル。
+```bash
+cargo install --path .
 ```
 
 ### 3. ディレクトリの指定
@@ -180,7 +217,7 @@ let directories = [
 - 設定値が4096文字を超える場合、警告が表示され、その行は無視されます。
 
 ## 型定義ファイルの作成と検証
-![CleanShot 2024-10-16 at 15 14 29](https://github.com/user-attachments/assets/07c320a4-6053-4096-844e-00345b11d05e)
+![CleanShot 2024-10-17 at 12 49 18](https://github.com/user-attachments/assets/d78f91d4-c6c9-4379-b87b-61135817e435)
 
 
 ### `cargo run output` で空の型定義ファイルを作成
@@ -233,34 +270,36 @@ debug -> bool
 kernel.sysrq -> int
 log.name -> string
 kernel.domainname -> string
-net.core.somaxconn -> float
+net.ipv4.tcp_rmem -> int
 kernel.panic -> string
 vm.swappiness -> int
 fs.file-max -> int
 ```
 
-設定ファイルの型が一致していない場合
-```
+### 設定ファイル例と型の不一致
+```bash
 example1.conf
 endpoint = localhost:3000
-debug = 1234
+debug = 1234 ← bool型に文字列を入れている
 log.file = /var/log/console.log
 
 99-example.conf
-kernel.sysrq=`'`.|¥/;""?`
+kernel.sysrq = '`'`.|¥/;""?'` ← int型に文字列を入れている
 
 20-extra.conf
-net.core.somaxconn = asdf
+net.ipv4.tcp_rmem = asdf ← int型に文字列を入れている
 
 10-custom.conf
-vm.swappiness = 10.1
+vm.swappiness = 10.1 ← int型に浮動小数点数を入れている
 fs.file-max = 100000
 ```
+
 以下のように表示されます
+### エラーメッセージ例：
 ```bash
 Error: キー 'debug' の値 '1234' はブール値ではありません。
 Error: キー 'kernel.sysrq' の値 '`'`.|¥/;""?`' は整数ではありません。
-Error: キー 'net.core.somaxconn' の値 'asdf' は浮動小数点数ではありません。
+Error: キー 'net.ipv4.tcp_rmem' の値 'asdf' は浮動小数点数ではありません。
 Error: キー 'vm.swappiness' の値 '10.1' は整数ではありません。
 設定ファイルのパース中にエラーが発生しました: 設定ファイルにエラーがあります。
 ```

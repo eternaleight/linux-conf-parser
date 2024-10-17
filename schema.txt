@@ -1,12 +1,12 @@
 log.file -> string
 endpoint -> string
-net.ipv4.tcp_syncookies ->int
-kernel.modprobe ->string
+net.ipv4.tcp_syncookies -> int
+kernel.modprobe -> string
 debug -> bool
 kernel.sysrq -> int
 log.name -> string
 kernel.domainname -> string
-net.core.somaxconn -> float
+net.ipv4.tcp_rmem -> float
 kernel.panic -> string
 vm.swappiness -> int
 fs.file-max -> int
