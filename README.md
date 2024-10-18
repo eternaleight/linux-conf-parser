@@ -1,5 +1,4 @@
 # Linux sysctl.confパーサ (設定ファイルパーサ)
-🔨作成中(WIP)
 
 | ![CleanShot 2024-10-14 at 02 44 47](https://github.com/user-attachments/assets/d05ac8b0-37eb-42cd-b605-51919885eacd) |
 |:--:|
