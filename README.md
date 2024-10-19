@@ -87,6 +87,11 @@ config/
 
 ## 使用方法
 
+### ファイルをダウンロード
+```bash
+git clone https://github.com/eternaleight/linux-conf-parser
+```
+
 ### 1. 設定ファイルのフォーマット
 
 設定ファイルは次の形式で記述します：
