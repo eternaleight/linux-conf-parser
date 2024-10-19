@@ -1,145 +1,140 @@
-use linux_conf_parser::core::directory_parser::parse_all_sysctl_files;
-use linux_conf_parser::core::file_parser::{parse_sysctl_conf, MAX_VALUE_LENGTH};
-use linux_conf_parser::core::schema;
-use rustc_hash::FxHashMap;
-use std::fs::{self, File};
-use std::io::{Error, Write};
-use std::path::{Path, PathBuf};
-
-/// テスト用の一時ディレクトリとファイルを作成する関数
-fn setup_test_file(file_name: &str, content: &str) -> PathBuf {
-    let test_dir: PathBuf = PathBuf::from("test_data");
-    let file_path: PathBuf = test_dir.join(file_name);
-
-    // ファイルを含むディレクトリ全体を再帰的に作成
-    if let Some(parent_dir) = file_path.parent() {
-        fs::create_dir_all(parent_dir).unwrap();
-    }
-
-    // 既にファイルが存在している場合は削除
-    if file_path.exists() {
-        fs::remove_file(&file_path).unwrap();
-    }
-
-    // ファイルを作成して内容を書き込む
-    let mut file: File = File::create(&file_path).unwrap();
-    file.write_all(content.as_bytes()).unwrap();
-
-    // 作成されたファイルパスを表示（デバッグ用）
-    println!("ファイル作成: {:?}", file_path);
-    assert!(
-        file_path.exists(),
-        "ファイルが作成されていません: {:?}",
-        file_path
-    );
-
-    file_path
-}
-
-fn cleanup_test_files() {
-    if fs::remove_dir_all("test_data").is_err() {
-        println!("テストデータのクリーンアップに失敗しました");
-    } else {
-        println!("テストデータのクリーンアップが成功しました");
-    }
-}
-
-/// 存在しないファイルを開いた場合のエラーテスト
-#[test]
-fn test_non_existent_file() {
-    let file_path: &Path = Path::new("non_existent.conf");
-    let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(file_path);
-    assert!(result.is_err());
-    if let Err(e) = result {
-        assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
-    }
-}
-
-/// 4096文字を超える値が含まれている場合のエラーテスト
-#[test]
-#[should_panic(expected = "値が4096文字を超えています")]
-fn test_value_too_long() {
-    let long_value: String = "A".repeat(MAX_VALUE_LENGTH + 1);
-    let content: String = format!("long.key = {}", long_value);
-    let file_path: PathBuf = setup_test_file("long_value.conf", &content);
-
-    let _ = parse_sysctl_conf(&file_path);
-    cleanup_test_files();
-}
-
-/// 正常な設定ファイルを読み込むテスト
-#[test]
-fn test_valid_conf_file() {
-    let content: &str = "net.ipv4.tcp_syncookies = 1\nfs.file-max = 2097152";
-    let file_path: PathBuf = setup_test_file("valid.conf", content);
-
-    let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(&file_path);
-    assert!(result.is_ok(), "設定ファイルのパースに失敗しました");
-
-    let map: FxHashMap<String, String> = result.unwrap();
-
-    // マップ全体を表示して、デバッグしやすくする
-    println!("{:?}", map);
-
-    assert_eq!(
-        map.get("net.ipv4.tcp_syncookies")
-            .expect("tcp_syncookies が存在しません"),
-        "1"
-    );
-    assert_eq!(
-        map.get("fs.file-max").expect("file-max が存在しません"),
-        "2097152"
-    );
-    cleanup_test_files();
-}
-
-/// 再帰的なディレクトリ読み込みのテスト
-#[test]
-fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
-    let content1: &str = "net.ipv4.tcp_syncookies = 1";
-    let content2: &str = "fs.file-max = 2097152";
-
-    // ファイルをセットアップ
-    setup_test_file("dir1/test1.conf", content1);
-    setup_test_file("dir1/subdir/test2.conf", content2);
-
-    // 再帰的にディレクトリを探索してパースする
-    let directories: [&str; 1] = ["test_data/dir1"];
-
-    // スキーマファイルを読み込む
-    let schema_path: &Path = Path::new("schema.txt");
-    let schema: FxHashMap<String, String> = schema::load_schema(schema_path)?;
-
-    let mut result_map: FxHashMap<String, String> = FxHashMap::default();
-    let result: Result<(), Error> = parse_all_sysctl_files(&directories, &schema, &mut result_map);
-
-    // パース結果をデバッグ表示
-    println!("パース結果: {:?}", result_map);
-
-    // パースが成功したことを確認
-    assert!(result.is_ok(), "Sysctlファイルのパースに失敗しました");
-
-    // パース結果の検証
-    assert_eq!(
-        result_map.get("net.ipv4.tcp_syncookies"),
-        Some(&"1".to_string())
-    );
-    assert_eq!(result_map.get("fs.file-max"), Some(&"2097152".to_string()));
-
-    // テスト後のクリーンアップ
-    cleanup_test_files();
-
-    Ok(())
-}
-
 #[cfg(test)]
-
 mod tests {
-    use super::*;
+    use linux_conf_parser::core::directory_parser::parse_all_sysctl_files;
+    use linux_conf_parser::core::file_parser::{parse_sysctl_conf, MAX_VALUE_LENGTH};
+    use linux_conf_parser::core::schema;
+    use linux_conf_parser::core::schema::{load_schema, validate_against_schema};
     use rustc_hash::FxHashMap;
-    use schema::{load_schema, validate_against_schema};
-    use std::fs::File;
-    use std::io::Write;
+    use std::fs::{self, File};
+    use std::io::{self, Error, Write};
+    use std::path::{Path, PathBuf};
+
+    /// テスト用の一時ディレクトリとファイルを作成する関数
+    fn setup_test_file(file_name: &str, content: &str) -> PathBuf {
+        let test_dir: PathBuf = PathBuf::from("test_data");
+        let file_path: PathBuf = test_dir.join(file_name);
+
+        // ファイルを含むディレクトリ全体を再帰的に作成
+        if let Some(parent_dir) = file_path.parent() {
+            fs::create_dir_all(parent_dir).unwrap();
+        }
+
+        // 既にファイルが存在している場合は削除
+        if file_path.exists() {
+            fs::remove_file(&file_path).unwrap();
+        }
+
+        // ファイルを作成して内容を書き込む
+        let mut file: File = File::create(&file_path).unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+
+        // 作成されたファイルパスを表示（デバッグ用）
+        println!("ファイル作成: {:?}", file_path);
+        assert!(
+            file_path.exists(),
+            "ファイルが作成されていません: {:?}",
+            file_path
+        );
+
+        file_path
+    }
+
+    fn cleanup_test_files() {
+        if fs::remove_dir_all("test_data").is_err() {
+            println!("テストデータのクリーンアップに失敗しました");
+        } else {
+            println!("テストデータのクリーンアップが成功しました");
+        }
+    }
+
+    /// 存在しないファイルを開いた場合のエラーテスト
+    #[test]
+    fn test_non_existent_file() {
+        let file_path: &Path = Path::new("non_existent.conf");
+        let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(file_path);
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
+        }
+    }
+
+    /// 4096文字を超える値が含まれている場合のエラーテスト
+    #[test]
+    #[should_panic(expected = "値が4096文字を超えています")]
+    fn test_value_too_long() {
+        let long_value: String = "A".repeat(MAX_VALUE_LENGTH + 1);
+        let content: String = format!("long.key = {}", long_value);
+        let file_path: PathBuf = setup_test_file("long_value.conf", &content);
+
+        let _ = parse_sysctl_conf(&file_path);
+        cleanup_test_files();
+    }
+
+    /// 正常な設定ファイルを読み込むテスト
+    #[test]
+    fn test_valid_conf_file() {
+        let content: &str = "net.ipv4.tcp_syncookies = 1\nfs.file-max = 2097152";
+        let file_path: PathBuf = setup_test_file("valid.conf", content);
+
+        let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(&file_path);
+        assert!(result.is_ok(), "設定ファイルのパースに失敗しました");
+
+        let map: FxHashMap<String, String> = result.unwrap();
+
+        // マップ全体を表示して、デバッグしやすくする
+        println!("{:?}", map);
+
+        assert_eq!(
+            map.get("net.ipv4.tcp_syncookies")
+                .expect("tcp_syncookies が存在しません"),
+            "1"
+        );
+        assert_eq!(
+            map.get("fs.file-max").expect("file-max が存在しません"),
+            "2097152"
+        );
+        cleanup_test_files();
+    }
+
+    /// 再帰的なディレクトリ読み込みのテスト
+    #[test]
+    fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
+        let content1: &str = "net.ipv4.tcp_syncookies = 1";
+        let content2: &str = "fs.file-max = 2097152";
+
+        // ファイルをセットアップ
+        setup_test_file("dir1/test1.conf", content1);
+        setup_test_file("dir1/subdir/test2.conf", content2);
+
+        // 再帰的にディレクトリを探索してパースする
+        let directories: [&str; 1] = ["test_data/dir1"];
+
+        // スキーマファイルを読み込む
+        let schema_path: &Path = Path::new("schema.txt");
+        let schema: FxHashMap<String, String> = schema::load_schema(schema_path)?;
+
+        let mut result_map: FxHashMap<String, String> = FxHashMap::default();
+        let result: Result<(), Error> =
+            parse_all_sysctl_files(&directories, &schema, &mut result_map);
+
+        // パース結果をデバッグ表示
+        println!("パース結果: {:?}", result_map);
+
+        // パースが成功したことを確認
+        assert!(result.is_ok(), "Sysctlファイルのパースに失敗しました");
+
+        // パース結果の検証
+        assert_eq!(
+            result_map.get("net.ipv4.tcp_syncookies"),
+            Some(&"1".to_string())
+        );
+        assert_eq!(result_map.get("fs.file-max"), Some(&"2097152".to_string()));
+
+        // テスト後のクリーンアップ
+        cleanup_test_files();
+
+        Ok(())
+    }
 
     /// テスト用のスキーマファイルをセットアップするヘルパー関数
     fn setup_test_schema(file_name: &str, content: &str) -> PathBuf {
@@ -169,7 +164,7 @@ mod tests {
         key4 -> float
         "#;
         let schema_path: PathBuf = setup_test_schema("valid_schema.txt", schema_content);
-        let result: Result<FxHashMap<String, String>, Error> = load_schema(&schema_path);
+        let result: io::Result<FxHashMap<String, String>> = load_schema(&schema_path);
         assert!(result.is_ok(), "スキーマファイルの読み込みに失敗しました");
 
         let schema = result.unwrap();
@@ -191,7 +186,7 @@ mod tests {
         key3 -> float
         "#;
         let schema_path: PathBuf = setup_test_schema("invalid_schema.txt", schema_content);
-        let result: Result<FxHashMap<String, String>, Error> = load_schema(&schema_path);
+        let result: io::Result<FxHashMap<String, String>> = load_schema(&schema_path);
 
         // エラーメッセージが適切に表示され、結果がエラーになることを確認
         assert!(result.is_ok(), "不正な形式の行を無視しなければなりません");
