@@ -34,12 +34,12 @@ pub fn display_json_map(map: &FxHashMap<String, String>) {
                     // 既存のルートキーにネストされた値を追加
                     let entry_map: &mut serde_json::Map<String, Value> =
                         entry.as_object_mut().unwrap();
-                    entry_map.insert(nested_key.to_string(), json!(value));
+                    entry_map.insert(nested_key, json!(value));
                 }
             } else {
                 // 新しいネストされたキーを作成
                 let mut nested_map: FxHashMap<String, String> = FxHashMap::default();
-                nested_map.insert(nested_key.to_string(), value.clone());
+                nested_map.insert(nested_key, value.clone());
                 json_map.insert(root_key.to_string(), json!(nested_map));
             }
         } else {
