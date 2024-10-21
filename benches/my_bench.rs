@@ -59,12 +59,12 @@ mod benchmarks {
     use std::path::Path;
 
     // 既存のベンチマーク
-    create_bench!(bench_parse_sysctl_conf, || {
+    create_bench!(bench_parse_conf_to_map, || {
         let file_path = setup_test_file(
             "test.conf",
             "net.ipv4.tcp_syncookies = 1\nfs.file-max = 2097152",
         );
-        file_parser::parse_sysctl_conf(&file_path).unwrap();
+        file_parser::parse_conf_to_map(&file_path).unwrap();
     });
 
     create_bench!(bench_parse_all_sysctl_files, || {
@@ -83,23 +83,23 @@ mod benchmarks {
 
     create_bench!(bench_empty_conf_file, || {
         let file_path = setup_test_file("empty.conf", ""); // 空の設定ファイルをパースする
-        file_parser::parse_sysctl_conf(&file_path).unwrap();
+        file_parser::parse_conf_to_map(&file_path).unwrap();
     });
 
     create_bench!(bench_large_conf_file, || {
         // 大量のデータを持つ設定ファイルのベンチマーク
         let large_content = "key1 = value1\n".repeat(1000); // 1000行の設定
         let file_path = setup_test_file("large.conf", &large_content);
-        file_parser::parse_sysctl_conf(&file_path).unwrap();
+        file_parser::parse_conf_to_map(&file_path).unwrap();
     });
 
     // 高負荷ベンチマーク
-    // create_bench!(bench_parse_sysctl_conf, || {
+    // create_bench!(bench_parse_conf_to_map, || {
     //     // 1万行の設定ファイルを生成
     //     let large_content =
     //         "net.ipv4.tcp_syncookies = 1\n".repeat(10000) + "fs.file-max = 2097152\n";
     //     let file_path = setup_test_file("large_test.conf", &large_content);
-    //     parser::parse_sysctl_conf(&file_path).unwrap();
+    //     parser::parse_conf_to_map(&file_path).unwrap();
     // });
 
     // create_bench!(bench_parse_all_sysctl_files, || {
@@ -116,7 +116,7 @@ mod benchmarks {
     //     // 100個の空ファイルを生成してパースする
     //     for i in 0..100 {
     //         let file_path = setup_test_file(&format!("empty_files/empty{}.conf", i), "");
-    //         parser::parse_sysctl_conf(&file_path).unwrap();
+    //         parser::parse_conf_to_map(&file_path).unwrap();
     //     }
     // });
 
@@ -124,6 +124,6 @@ mod benchmarks {
     //     // 1万行のデータを持つ設定ファイルを生成
     //     let large_content = "key1 = value1\n".repeat(10000); // 1万行の設定
     //     let file_path = setup_test_file("large_1m.conf", &large_content);
-    //     parser::parse_sysctl_conf(&file_path).unwrap();
+    //     parser::parse_conf_to_map(&file_path).unwrap();
     // });
 }

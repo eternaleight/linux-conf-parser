@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use linux_conf_parser::core::directory_parser::parse_all_sysctl_files;
-    use linux_conf_parser::core::file_parser::{parse_sysctl_conf, MAX_VALUE_LENGTH};
+    use linux_conf_parser::core::file_parser::{MAX_VALUE_LENGTH, parse_conf_to_map};
     use linux_conf_parser::core::schema;
     use linux_conf_parser::core::schema::{load_schema, validate_against_schema};
     use rustc_hash::FxHashMap;
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn test_non_existent_file() {
         let file_path: &Path = Path::new("non_existent.conf");
-        let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(file_path);
+        let result: Result<FxHashMap<String, String>, Error> = parse_conf_to_map(file_path);
         assert!(result.is_err());
         if let Err(e) = result {
             assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
@@ -66,7 +66,7 @@ mod tests {
         let content: String = format!("long.key = {}", long_value);
         let file_path: PathBuf = setup_test_file("long_value.conf", &content);
 
-        let _ = parse_sysctl_conf(&file_path);
+        let _ = parse_conf_to_map(&file_path);
         cleanup_test_files();
     }
 
@@ -76,7 +76,7 @@ mod tests {
         let content: &str = "net.ipv4.tcp_syncookies = 1\nfs.file-max = 2097152";
         let file_path: PathBuf = setup_test_file("valid.conf", content);
 
-        let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(&file_path);
+        let result: Result<FxHashMap<String, String>, Error> = parse_conf_to_map(&file_path);
         assert!(result.is_ok(), "設定ファイルのパースに失敗しました");
 
         let map: FxHashMap<String, String> = result.unwrap();

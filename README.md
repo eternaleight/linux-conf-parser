@@ -450,7 +450,7 @@ Rustのテストランナーは複数のスレッドを使用して並列にテ�
 #[test]
 fn test_non_existent_file() {
     let file_path: &Path = Path::new("non_existent.conf");
-    let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(file_path);
+    let result: Result<FxHashMap<String, String>, Error> = parse_conf_to_map(file_path);
     assert!(result.is_err());
     if let Err(e) = result {
         assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
@@ -472,7 +472,7 @@ fn test_value_too_long() {
     let file_path: PathBuf = setup_test_file("long_value.conf", &content);
 
     // この関数呼び出しは panic を引き起こすことが期待されている
-    let _ = parse_sysctl_conf(&file_path);
+    let _ = parse_conf_to_map(&file_path);
     cleanup_test_files();
 }
 ```
@@ -488,7 +488,7 @@ fn test_valid_conf_file() {
     let content: &str = "net.ipv4.tcp_syncookies = 1\nfs.file-max = 2097152";
     let file_path: PathBuf = setup_test_file("valid.conf", content);
 
-    let result: Result<FxHashMap<String, String>, Error> = parse_sysctl_conf(&file_path);
+    let result: Result<FxHashMap<String, String>, Error> = parse_conf_to_map(&file_path);
     assert!(result.is_ok(), "設定ファイルのパースに失敗しました");
 
     let map: FxHashMap<String, String> = result.unwrap();
@@ -807,7 +807,7 @@ stable チャンネルに戻ります。
 test benchmarks::bench_empty_conf_file        ... bench:     114,022.41 ns/iter (+/- 48,714.07)
 test benchmarks::bench_large_conf_file        ... bench:     636,778.90 ns/iter (+/- 247,165.45)
 test benchmarks::bench_parse_all_sysctl_files ... bench:     498,996.82 ns/iter (+/- 311,588.69)
-test benchmarks::bench_parse_sysctl_conf      ... bench:     377,210.36 ns/iter (+/- 33,725.80)
+test benchmarks::bench_parse_conf_to_map      ... bench:     377,210.36 ns/iter (+/- 33,725.80)
 ```
 
 - **ns/iter**: 1回の処理にかかった時間（ナノ秒）。
