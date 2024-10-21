@@ -1,12 +1,14 @@
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::fs::{self, File};
-use std::io::{self, BufRead, Error, Write};
+use std::io::{self, BufRead, Error};
 use std::path::Path;
+
+use crate::utils::display::display_json_map;
 
 pub const MAX_VALUE_LENGTH: usize = 4096;
 
 /// 設定ファイルをパースし、結果をFxHashMap格納
-pub fn parse_sysctl_conf(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
+pub fn parse_conf_to_map(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
     let file: File = fs::File::open(file_path).map_err(|e: Error| {
         eprintln!(
             "Error: ファイル '{}' を開く際にエラーが発生しました: {}",
@@ -51,32 +53,41 @@ pub fn parse_sysctl_conf(file_path: &Path) -> io::Result<FxHashMap<String, Strin
     Ok(map)
 }
 
-/// 指定されたキーを空の値としてファイルに出力
-pub fn output_empty_values_to_file(
-    result_map: &FxHashMap<String, String>,
-    output_file_path: &str,
+/// .conf ファイルのパース処理
+pub fn parse_conf_file(
+    path: &Path,
+    parsed_files: &mut FxHashSet<String>,
+    result_map: &mut FxHashMap<String, String>,
 ) -> io::Result<()> {
-    // 出力先ファイルを開く
-    let output_file: Result<File, Error> = File::create(output_file_path);
-    match output_file {
-        Ok(mut file) => {
-            println!(
-                "\n空の型定義ファイル {} を作成しました。🖋️✨
-1.schema.txtに名前を変更して型定義ファイルを作成して下さい。
-2.cargo runで.conf ファイルの設定をJSON 形式で出力し、型の検証結果も表示。
-",
-                output_file_path
-            );
-            // パース結果のキーを空の値として出力
-            for key in result_map.keys() {
-                writeln!(file, "{} ->", key)?;
+    let path_str: String = path.to_string_lossy().to_string();
+
+    if parsed_files.contains(&path_str) {
+        // 既にパース済みならスキップ
+        return Ok(());
+    }
+
+    println!("File: {:?}", path);
+    match parse_conf_to_map(path) {
+        Ok(config_map) => {
+            display_json_map(&config_map);
+            println!();
+
+            // パース結果を result_map に追加
+            for (key, value) in config_map {
+                result_map.insert(key.to_string(), value);
             }
-            // println!("ファイルに書き込みが完了しました: {}", output_file_path);
+
+            // パース済みとしてセットに追加
+            parsed_files.insert(path_str);
         }
         Err(e) => {
-            eprintln!("ファイル {} の作成に失敗しました: {}", output_file_path, e);
-            return Err(e);
+            eprintln!(
+                "Error: ファイル '{}' のパースに失敗しました: {}",
+                path.display(),
+                e
+            );
         }
     }
+
     Ok(())
 }
