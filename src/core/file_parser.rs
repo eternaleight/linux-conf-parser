@@ -7,6 +7,45 @@ use crate::utils::display::display_json_map;
 
 pub const MAX_VALUE_LENGTH: usize = 4096;
 
+/// .confファイルのパース処理
+pub fn parse_conf_file(
+    path: &Path,
+    parsed_files: &mut FxHashSet<String>,
+    result_map: &mut FxHashMap<String, String>,
+) -> io::Result<()> {
+    let path_str: String = path.to_string_lossy().to_string();
+
+    if parsed_files.contains(&path_str) {
+        // 既にパース済みならスキップ
+        return Ok(());
+    }
+
+    println!("File: {:?}", path);
+    match parse_conf_to_map(path) {
+        Ok(config_map) => {
+            display_json_map(&config_map);
+            println!();
+
+            // パース結果をresult_mapに追加
+            for (key, value) in config_map {
+                result_map.insert(key.to_string(), value);
+            }
+
+            // パース済みとしてセットに追加
+            parsed_files.insert(path_str);
+        }
+        Err(e) => {
+            eprintln!(
+                "Error: ファイル '{}' のパースに失敗しました: {}",
+                path.display(),
+                e
+            );
+        }
+    }
+
+    Ok(())
+}
+
 /// 設定ファイルをパースし、結果をFxHashMap格納
 pub fn parse_conf_to_map(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
     let file: File = fs::File::open(file_path).map_err(|e: Error| {
@@ -53,41 +92,3 @@ pub fn parse_conf_to_map(file_path: &Path) -> io::Result<FxHashMap<String, Strin
     Ok(map)
 }
 
-/// .conf ファイルのパース処理
-pub fn parse_conf_file(
-    path: &Path,
-    parsed_files: &mut FxHashSet<String>,
-    result_map: &mut FxHashMap<String, String>,
-) -> io::Result<()> {
-    let path_str: String = path.to_string_lossy().to_string();
-
-    if parsed_files.contains(&path_str) {
-        // 既にパース済みならスキップ
-        return Ok(());
-    }
-
-    println!("File: {:?}", path);
-    match parse_conf_to_map(path) {
-        Ok(config_map) => {
-            display_json_map(&config_map);
-            println!();
-
-            // パース結果を result_map に追加
-            for (key, value) in config_map {
-                result_map.insert(key.to_string(), value);
-            }
-
-            // パース済みとしてセットに追加
-            parsed_files.insert(path_str);
-        }
-        Err(e) => {
-            eprintln!(
-                "Error: ファイル '{}' のパースに失敗しました: {}",
-                path.display(),
-                e
-            );
-        }
-    }
-
-    Ok(())
-}

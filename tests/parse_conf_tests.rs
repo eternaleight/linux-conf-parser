@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use linux_conf_parser::core::directory_parser::parse_all_sysctl_files;
+    use linux_conf_parser::core::directory_parser::parse_all_conf_files;
     use linux_conf_parser::core::file_parser::{MAX_VALUE_LENGTH, parse_conf_to_map};
     use linux_conf_parser::core::schema;
     use linux_conf_parser::core::schema::{load_schema, validate_against_schema};
@@ -98,7 +98,7 @@ mod tests {
 
     /// 再帰的なディレクトリ読み込みのテスト
     #[test]
-    fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_parse_all_conf_files() -> Result<(), Box<dyn std::error::Error>> {
         let content1: &str = "net.ipv4.tcp_syncookies = 1";
         let content2: &str = "fs.file-max = 2097152";
 
@@ -115,13 +115,13 @@ mod tests {
 
         let mut result_map: FxHashMap<String, String> = FxHashMap::default();
         let result: Result<(), Error> =
-            parse_all_sysctl_files(&directories, &schema, &mut result_map);
+            parse_all_conf_files(&directories, &schema, &mut result_map);
 
         // パース結果をデバッグ表示
         println!("パース結果: {:?}", result_map);
 
         // パースが成功したことを確認
-        assert!(result.is_ok(), "Sysctlファイルのパースに失敗しました");
+        assert!(result.is_ok(), ".confファイルのパースに失敗しました");
 
         // パース結果の検証
         assert_eq!(

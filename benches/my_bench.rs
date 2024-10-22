@@ -67,7 +67,7 @@ mod benchmarks {
         file_parser::parse_conf_to_map(&file_path).unwrap();
     });
 
-    create_bench!(bench_parse_all_sysctl_files, || {
+    create_bench!(bench_parse_all_conf_files, || {
         let _ = setup_test_file("dir1/test1.conf", "net.ipv4.tcp_syncookies = 1");
         let _ = setup_test_file("dir1/subdir/test2.conf", "fs.file-max = 2097152");
         let directories = ["test_data/dir1"];
@@ -78,7 +78,7 @@ mod benchmarks {
 
         let mut result_map = FxHashMap::default();
 
-        directory_parser::parse_all_sysctl_files(&directories, &schema, &mut result_map).unwrap();
+        directory_parser::parse_all_conf_files(&directories, &schema, &mut result_map).unwrap();
     });
 
     create_bench!(bench_empty_conf_file, || {
@@ -102,14 +102,14 @@ mod benchmarks {
     //     parser::parse_conf_to_map(&file_path).unwrap();
     // });
 
-    // create_bench!(bench_parse_all_sysctl_files, || {
+    // create_bench!(bench_parse_all_conf_files, || {
     //     // 10階層のディレクトリ構造に各100行のファイルを作成
     //     for i in 0..10 {
     //         let content = "net.ipv4.tcp_syncookies = 1\n".repeat(100);
     //         let _ = setup_test_file(&format!("dir1/level{}/test{}.conf", i, i), &content);
     //     }
     //     let directories = ["test_data/dir1"];
-    //     parser::parse_all_sysctl_files(&directories).unwrap();
+    //     parser::parse_all_conf_files(&directories).unwrap();
     // });
 
     // create_bench!(bench_empty_conf_file, || {

@@ -7,7 +7,8 @@ use std::path::PathBuf;
 use super::file_parser::parse_conf_file;
 use super::schema::validate_against_schema;
 
-pub fn parse_all_sysctl_files(
+/// 指定されたディレクトリ内のすべての設定ファイルをパースし、結果を検証
+pub fn parse_all_conf_files(
     directories: &[&str],
     schema: &FxHashMap<String, String>,
     result_map: &mut FxHashMap<String, String>,
@@ -23,7 +24,7 @@ pub fn parse_all_sysctl_files(
             );
             continue;
         }
-        if let Err(e) = parse_sysctl_dir(path, &mut parsed_files, result_map) {
+        if let Err(e) = parse_conf_dir(path, &mut parsed_files, result_map) {
             all_errors.push(format!(
                 "ディレクトリ '{}' のパースに失敗しました: {}",
                 path.display(),
@@ -51,7 +52,7 @@ pub fn parse_all_sysctl_files(
 }
 
 /// 再帰的にディレクトリ内の.confファイルを探索してパース
-fn parse_sysctl_dir(
+fn parse_conf_dir(
     path: &Path,
     parsed_files: &mut FxHashSet<String>,
     result_map: &mut FxHashMap<String, String>,
@@ -79,7 +80,7 @@ fn parse_sysctl_dir(
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("conf") {
             parse_conf_file(&path, parsed_files, result_map)?;
         } else if path.is_dir() {
-            parse_sysctl_dir(&path, parsed_files, result_map)?;
+            parse_conf_dir(&path, parsed_files, result_map)?;
         }
     }
 

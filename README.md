@@ -509,7 +509,7 @@ fn test_valid_conf_file() {
 }
 ```
 
-### 4. `test_parse_all_sysctl_files`
+### 4. `test_parse_all_conf_files`
 
 - **概要**: 再帰的にディレクトリを探索し、`sysctl` 設定ファイルを正しく読み込んでパースするかを確認するテストです。複数のディレクトリ内に保存された設定ファイルを読み込み、それぞれの設定項目がスキーマに基づいて適切に処理されるかどうかを検証します。
 - **期待結果**: 各 `sysctl` 設定ファイルが再帰的にディレクトリ内から正しく読み込まれ、パースされた結果が `FxHashMap` に期待通りに格納されること。また、スキーマに基づいた検証が成功し、エラーなく結果が返されること。
@@ -517,7 +517,7 @@ fn test_valid_conf_file() {
 ```rust
 /// 再帰的なディレクトリ読み込みのテスト
 #[test]
-fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
+fn test_parse_all_conf_files() -> Result<(), Box<dyn std::error::Error>> {
     let content1: &str = "net.ipv4.tcp_syncookies = 1";
     let content2: &str = "fs.file-max = 2097152";
 
@@ -533,13 +533,13 @@ fn test_parse_all_sysctl_files() -> Result<(), Box<dyn std::error::Error>> {
     let schema: FxHashMap<String, String> = schema::load_schema(schema_path)?;
 
     let mut result_map: FxHashMap<String, String> = FxHashMap::default();
-    let result: Result<(), Error> = parse_all_sysctl_files(&directories, &schema, &mut result_map);
+    let result: Result<(), Error> = parse_all_conf_files(&directories, &schema, &mut result_map);
 
     // パース結果をデバッグ表示
     println!("パース結果: {:?}", result_map);
 
     // パースが成功したことを確認
-    assert!(result.is_ok(), "Sysctlファイルのパースに失敗しました");
+    assert!(result.is_ok(), ".confファイルのパースに失敗しました");
 
     // パース結果の検証
     assert_eq!(
@@ -719,7 +719,7 @@ fn test_validate_mixed_invalid_types() {
 ```bash
 running 9 tests
 test test_non_existent_file ... ok
-test test_parse_all_sysctl_files ... ok
+test test_parse_all_conf_files ... ok
 test test_valid_conf_file ... ok
 test test_value_too_long - should panic ... ok
 test tests::test_load_invalid_schema ... ok
@@ -806,7 +806,7 @@ stable チャンネルに戻ります。
 ```
 test benchmarks::bench_empty_conf_file        ... bench:     114,022.41 ns/iter (+/- 48,714.07)
 test benchmarks::bench_large_conf_file        ... bench:     636,778.90 ns/iter (+/- 247,165.45)
-test benchmarks::bench_parse_all_sysctl_files ... bench:     498,996.82 ns/iter (+/- 311,588.69)
+test benchmarks::bench_parse_all_conf_files ... bench:     498,996.82 ns/iter (+/- 311,588.69)
 test benchmarks::bench_parse_conf_to_map      ... bench:     377,210.36 ns/iter (+/- 33,725.80)
 ```
 
