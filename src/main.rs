@@ -21,11 +21,11 @@ fn main() -> io::Result<()> {
     // パース結果を格納するマップ
     let mut result_map: FxHashMap<String, String> = FxHashMap::default();
 
-    // スキーマ検証とSysctlファイルのパースを実行
-    let result: Result<(), io::Error> = core::validate_and_parse_sysctl(
+    // スキーマ検証と.confファイルのパースを実行
+    let result: Result<(), io::Error> = core::validate_schema_and_parse_files(
         "schema.txt",
         &directories,
-        directory_parser::parse_all_sysctl_files,
+        directory_parser::parse_all_conf_files,
         schema::load_schema,
         &mut result_map,
     );
