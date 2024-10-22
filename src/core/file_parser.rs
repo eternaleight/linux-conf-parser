@@ -91,4 +91,3 @@ pub fn parse_conf_to_map(file_path: &Path) -> io::Result<FxHashMap<String, Strin
 
     Ok(map)
 }
-

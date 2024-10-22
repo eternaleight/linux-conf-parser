@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use linux_conf_parser::core::directory_parser::parse_all_conf_files;
-    use linux_conf_parser::core::file_parser::{MAX_VALUE_LENGTH, parse_conf_to_map};
+    use linux_conf_parser::core::file_parser::{parse_conf_to_map, MAX_VALUE_LENGTH};
     use linux_conf_parser::core::schema;
     use linux_conf_parser::core::schema::{load_schema, validate_against_schema};
     use rustc_hash::FxHashMap;

@@ -1,0 +1,21 @@
+#!/bin/sh
+# cargo fmtをコミットの前に実行する
+cargo fmt --all
+
+# フォーマット後、変更があるかどうか確認する
+if ! git diff --exit-code; then
+    echo "コードがフォーマットされました。もう一度コミットを実行してください。"
+    exit 1
+fi
+
+# cargo clippyをコミットの前に実行してコードの静的解析を行う
+if ! cargo clippy -- -D warnings; then
+    echo "Clippyによる警告があります。修正してください。"
+    exit 1
+fi
+
+# シンボリックリンクでGitフックに反映
+# ln -s ../../scripts/pre-commit .git/hooks/pre-commit
+
+# 実行権限の付与
+# chmod +x .git/hooks/pre-commit
