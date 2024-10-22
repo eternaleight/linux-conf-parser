@@ -1,14 +1,14 @@
 # Linux sysctl.confパーサ (設定ファイルパーサ)
 
-| ![CleanShot 2024-10-14 at 02 44 47](https://github.com/user-attachments/assets/d05ac8b0-37eb-42cd-b605-51919885eacd) |
+| ![CleanShot 2024-10-22 at 17 36 57](https://github.com/user-attachments/assets/d1f9ec74-b132-46c2-a4d7-d0d637b85e6b) |
 |:--:|
 | cargo runコマンド（設定ファイルをJSON形式で出力し、パース結果、型の検証結果を表示）|
 
-| ![CleanShot 2024-10-17 at 15 54 31](https://github.com/user-attachments/assets/c9bac18e-0e7b-4917-b129-c9bdad16f7f5) |
+| ![CleanShot 2024-10-22 at 16 32 58](https://github.com/user-attachments/assets/1cf892bb-e0a3-46f4-8ecb-335388d5bbf7) |
 |:--:|
 | cargo run outputコマンド（設定ファイルを元に、空の型定義ファイル `output.txt` を作成）|
 
-| ![CleanShot 2024-10-17 at 15 57 47](https://github.com/user-attachments/assets/135e5a60-1027-4560-9b5d-4cd2fb622a75) |
+| ![CleanShot 2024-10-22 at 16 33 17](https://github.com/user-attachments/assets/dfdb833d-f191-4114-953d-0b50593754c4) |
 |:--:|
 |linux-conf-parserコマンド (cargo runと機能は同じ、バイナリで実行)|
 
@@ -320,7 +320,8 @@ Error: キー 'vm.swappiness' のスキーマ型 ''string'' はサポートさ�
 
 
 ## 4096文字を超えるファイル読み込みテスト
-![CleanShot 2024-10-10 at 17 05 45](https://github.com/user-attachments/assets/8a47572a-1c58-4f44-9f87-a232bbcc9ee0)
+![CleanShot 2024-10-22 at 16 24 45](https://github.com/user-attachments/assets/c0451efb-b856-4255-8f5c-697fc9f1a761)
+
 
 
 このテストでは、`value.too.long` に4096文字を超える値が含まれる設定ファイルを読み込んだ際に、プログラムが正しくエラーメッセージを出力して終了することを確認します。
