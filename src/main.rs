@@ -1,3 +1,4 @@
+mod config;
 mod core;
 mod utils;
 
@@ -26,7 +27,7 @@ fn main() -> io::Result<()> {
 
     // スキーマ検証と.confファイルのパースを実行
     let result: Result<(), io::Error> = core::validate_schema_and_parse_files(
-        "schema.txt",
+        config::Config::SCHEMA_FILE_PATH,
         &directories,
         &parser,
         &schema,

@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests {
+    use linux_conf_parser::config::Config;
     use linux_conf_parser::core::directory_parser::DirectoryParser;
-    use linux_conf_parser::core::file_parser::{parse_conf_to_map, MAX_VALUE_LENGTH};
+    use linux_conf_parser::core::file_parser::parse_conf_to_map;
     use linux_conf_parser::core::schema::validate_against_schema;
     use linux_conf_parser::core::schema::LoadSchema;
     use linux_conf_parser::core::{ParseFiles, SchemaLoader};
@@ -63,7 +64,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "値が4096文字を超えています")]
     fn test_value_too_long() {
-        let long_value: String = "A".repeat(MAX_VALUE_LENGTH + 1);
+        let long_value: String = "A".repeat(Config::MAX_VALUE_LENGTH + 1);
         let content: String = format!("long.key = {}", long_value);
         let file_path: PathBuf = setup_test_file("long_value.conf", &content);
 
