@@ -1,10 +1,11 @@
+mod config;
 mod core;
 mod utils;
+
+use core::{directory_parser::DirectoryParser, schema::LoadSchema};
 use rustc_hash::FxHashMap;
 use std::io;
 
-use core::directory_parser;
-use core::schema;
 use utils::output::handle_output;
 
 fn main() -> io::Result<()> {
@@ -21,12 +22,15 @@ fn main() -> io::Result<()> {
     // パース結果を格納するマップ
     let mut result_map: FxHashMap<String, String> = FxHashMap::default();
 
+    let parser = DirectoryParser;
+    let schema = LoadSchema;
+
     // スキーマ検証と.confファイルのパースを実行
     let result: Result<(), io::Error> = core::validate_schema_and_parse_files(
-        "schema.txt",
+        config::Config::SCHEMA_FILE_PATH,
         &directories,
-        directory_parser::parse_all_conf_files,
-        schema::load_schema,
+        &parser,
+        &schema,
         &mut result_map,
     );
 

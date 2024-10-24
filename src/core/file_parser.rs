@@ -3,9 +3,8 @@ use std::fs::{self, File};
 use std::io::{self, BufRead, Error};
 use std::path::Path;
 
+use crate::config::Config;
 use crate::utils::display::display_json_map;
-
-pub const MAX_VALUE_LENGTH: usize = 4096;
 
 /// .confファイルのパース処理
 pub fn parse_conf_file(
@@ -82,7 +81,7 @@ pub fn parse_conf_to_map(file_path: &Path) -> io::Result<FxHashMap<String, Strin
             let value: &str = value.trim();
 
             // 値が4096文字を超えた場合はパニック
-            if value.len() > MAX_VALUE_LENGTH {
+            if value.len() > Config::MAX_VALUE_LENGTH {
                 panic!("Error: キー '{}' の値が4096文字を超えています。👀", key);
             }
             map.insert(key.to_string(), value.to_string());

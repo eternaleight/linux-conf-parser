@@ -54,7 +54,10 @@ macro_rules! create_bench {
 #[cfg(test)]
 mod benchmarks {
     use super::*;
-    use linux_conf_parser::core::{directory_parser, file_parser, schema};
+    use linux_conf_parser::core::{
+        directory_parser::DirectoryParser, file_parser, schema::LoadSchema, ParseFiles,
+        SchemaLoader,
+    };
     use rustc_hash::FxHashMap;
     use std::path::Path;
 
@@ -67,20 +70,6 @@ mod benchmarks {
         file_parser::parse_conf_to_map(&file_path).unwrap();
     });
 
-    create_bench!(bench_parse_all_conf_files, || {
-        let _ = setup_test_file("dir1/test1.conf", "net.ipv4.tcp_syncookies = 1");
-        let _ = setup_test_file("dir1/subdir/test2.conf", "fs.file-max = 2097152");
-        let directories = ["test_data/dir1"];
-
-        // スキーマファイルを読み込む
-        let schema_path = Path::new("schema.txt");
-        let schema = schema::load_schema(&schema_path).unwrap(); // スキーマを読み込む
-
-        let mut result_map = FxHashMap::default();
-
-        directory_parser::parse_all_conf_files(&directories, &schema, &mut result_map).unwrap();
-    });
-
     create_bench!(bench_empty_conf_file, || {
         let file_path = setup_test_file("empty.conf", ""); // 空の設定ファイルをパースする
         file_parser::parse_conf_to_map(&file_path).unwrap();
@@ -91,6 +80,24 @@ mod benchmarks {
         let large_content = "key1 = value1\n".repeat(1000); // 1000行の設定
         let file_path = setup_test_file("large.conf", &large_content);
         file_parser::parse_conf_to_map(&file_path).unwrap();
+    });
+
+    create_bench!(bench_parse_all_conf_files, || {
+        let _ = setup_test_file("dir1/test1.conf", "net.ipv4.tcp_syncookies = 1");
+        let _ = setup_test_file("dir1/subdir/test2.conf", "fs.file-max = 2097152");
+        let directories = ["test_data/dir1"];
+
+        // スキーマファイルを読み込む
+        let schema_path = Path::new("schema.txt");
+        let schema_loader = LoadSchema;
+        let schema = schema_loader.load_schema(schema_path).unwrap(); // スキーマを読み込む
+
+        let mut result_map = FxHashMap::default();
+        let parser = DirectoryParser;
+
+        parser
+            .parse_all_conf_files(&directories, &schema, &mut result_map)
+            .unwrap(); // トレイトメソッドを呼び出し
     });
 
     // 高負荷ベンチマーク
