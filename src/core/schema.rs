@@ -3,44 +3,50 @@ use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Error};
 use std::path::Path;
 
-/// スキーマファイルを読み込み、キーと型のペアを返す
-pub fn load_schema(file_path: &Path) -> io::Result<FxHashMap<String, String>> {
-    let file: fs::File = fs::File::open(file_path).map_err(|e: Error| {
-        eprintln!(
-            "Error: スキーマファイル '{}' を開く際にエラーが発生しました: {}",
-            file_path.display(),
-            e
-        );
-        e
-    })?;
-    let reader: BufReader<File> = io::BufReader::new(file);
-    let mut schema: FxHashMap<String, String> = FxHashMap::default();
+use super::SchemaLoader;
 
-    for line in reader.lines() {
-        let line: String = line.map_err(|e: Error| {
+pub struct LoadSchema;
+
+impl SchemaLoader for LoadSchema {
+    /// スキーマファイルを読み込み、キーと型のペアを返す
+    fn load_schema(&self, file_path: &Path) -> io::Result<FxHashMap<String, String>> {
+        let file: fs::File = fs::File::open(file_path).map_err(|e: Error| {
             eprintln!(
-                "Error: スキーマファイル '{}' の読み込み中にエラーが発生しました: {}",
+                "Error: スキーマファイル '{}' を開く際にエラーが発生しました: {}",
                 file_path.display(),
                 e
             );
             e
         })?;
-        let trimmed: &str = line.trim();
+        let reader: BufReader<File> = io::BufReader::new(file);
+        let mut schema: FxHashMap<String, String> = FxHashMap::default();
 
-        // 空行やコメント行を無視
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
+        for line in reader.lines() {
+            let line: String = line.map_err(|e: Error| {
+                eprintln!(
+                    "Error: スキーマファイル '{}' の読み込み中にエラーが発生しました: {}",
+                    file_path.display(),
+                    e
+                );
+                e
+            })?;
+            let trimmed: &str = line.trim();
+
+            // 空行やコメント行を無視
+            if trimmed.is_empty() || trimmed.starts_with('#') {
+                continue;
+            }
+
+            // "->" で分割してキーと型を抽出
+            if let Some((key, value_type)) = trimmed.split_once("->") {
+                let key: String = key.trim().to_string();
+                let value_type: String = value_type.trim().to_string();
+                schema.insert(key, value_type);
+            }
         }
 
-        // "->" で分割してキーと型を抽出
-        if let Some((key, value_type)) = trimmed.split_once("->") {
-            let key: String = key.trim().to_string();
-            let value_type: String = value_type.trim().to_string();
-            schema.insert(key, value_type);
-        }
+        Ok(schema)
     }
-
-    Ok(schema)
 }
 
 /// 数値かどうかを判定するヘルパー関数

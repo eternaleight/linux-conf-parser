@@ -6,49 +6,55 @@ use std::path::PathBuf;
 
 use super::file_parser::parse_conf_file;
 use super::schema::validate_against_schema;
+use super::ParseFiles;
 
-/// 指定されたディレクトリ内のすべての設定ファイルをパースし、結果を検証
-pub fn parse_all_conf_files(
-    directories: &[&str],
-    schema: &FxHashMap<String, String>,
-    result_map: &mut FxHashMap<String, String>,
-) -> io::Result<()> {
-    let mut parsed_files: FxHashSet<String> = FxHashSet::default();
-    let mut all_errors: Vec<String> = Vec::new(); // 全てのエラーを収集
-    for dir in directories {
-        let path: &Path = Path::new(dir);
-        if !path.is_dir() {
-            eprintln!(
-                "Error: 指定されたディレクトリ '{}' が存在しません。",
-                path.display()
-            );
-            continue;
+pub struct DirectoryParser;
+
+impl ParseFiles for DirectoryParser {
+    /// 指定されたディレクトリ内のすべての設定ファイルをパースし、結果を検証
+    fn parse_all_conf_files(
+        &self,
+        directories: &[&str],
+        schema: &FxHashMap<String, String>,
+        result_map: &mut FxHashMap<String, String>,
+    ) -> io::Result<()> {
+        let mut parsed_files: FxHashSet<String> = FxHashSet::default();
+        let mut all_errors: Vec<String> = Vec::new(); // 全てのエラーを収集
+        for dir in directories {
+            let path: &Path = Path::new(dir);
+            if !path.is_dir() {
+                eprintln!(
+                    "Error: 指定されたディレクトリ '{}' が存在しません。",
+                    path.display()
+                );
+                continue;
+            }
+            if let Err(e) = parse_conf_dir(path, &mut parsed_files, result_map) {
+                all_errors.push(format!(
+                    "ディレクトリ '{}' のパースに失敗しました: {}",
+                    path.display(),
+                    e
+                ));
+            }
         }
-        if let Err(e) = parse_conf_dir(path, &mut parsed_files, result_map) {
-            all_errors.push(format!(
-                "ディレクトリ '{}' のパースに失敗しました: {}",
-                path.display(),
-                e
+
+        // パース結果をスキーマに基づいて検証
+        if let Err(validation_error) = validate_against_schema(result_map, schema) {
+            all_errors.push(validation_error); // エラーを収集
+        }
+
+        // すべてのエラーを出力
+        if !all_errors.is_empty() {
+            for error in all_errors {
+                eprintln!("{}", error);
+            }
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "設定ファイルにエラーがあります。",
             ));
         }
+        Ok(())
     }
-
-    // パース結果をスキーマに基づいて検証
-    if let Err(validation_error) = validate_against_schema(result_map, schema) {
-        all_errors.push(validation_error); // エラーを収集
-    }
-
-    // すべてのエラーを出力
-    if !all_errors.is_empty() {
-        for error in all_errors {
-            eprintln!("{}", error);
-        }
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "設定ファイルにエラーがあります。",
-        ));
-    }
-    Ok(())
 }
 
 /// 再帰的にディレクトリ内の.confファイルを探索してパース

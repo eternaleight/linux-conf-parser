@@ -1,9 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use linux_conf_parser::core::directory_parser::parse_all_conf_files;
+    use linux_conf_parser::core::directory_parser::DirectoryParser;
     use linux_conf_parser::core::file_parser::{parse_conf_to_map, MAX_VALUE_LENGTH};
-    use linux_conf_parser::core::schema;
-    use linux_conf_parser::core::schema::{load_schema, validate_against_schema};
+    use linux_conf_parser::core::schema::validate_against_schema;
+    use linux_conf_parser::core::schema::LoadSchema;
+    use linux_conf_parser::core::{ParseFiles, SchemaLoader};
     use rustc_hash::FxHashMap;
     use std::fs::{self, File};
     use std::io::{self, Error, Write};
@@ -111,11 +112,13 @@ mod tests {
 
         // スキーマファイルを読み込む
         let schema_path: &Path = Path::new("schema.txt");
-        let schema: FxHashMap<String, String> = schema::load_schema(schema_path)?;
+        let schema_loader = LoadSchema;
+        let schema: FxHashMap<String, String> = schema_loader.load_schema(schema_path)?;
 
         let mut result_map: FxHashMap<String, String> = FxHashMap::default();
+        let parser = DirectoryParser; // スキーマローダーのインスタンスを作成
         let result: Result<(), Error> =
-            parse_all_conf_files(&directories, &schema, &mut result_map);
+            parser.parse_all_conf_files(&directories, &schema, &mut result_map);
 
         // パース結果をデバッグ表示
         println!("パース結果: {:?}", result_map);
@@ -164,7 +167,8 @@ mod tests {
         key4 -> float
         "#;
         let schema_path: PathBuf = setup_test_schema("valid_schema.txt", schema_content);
-        let result: io::Result<FxHashMap<String, String>> = load_schema(&schema_path);
+        let schema_loader = LoadSchema;
+        let result: io::Result<FxHashMap<String, String>> = schema_loader.load_schema(&schema_path);
         assert!(result.is_ok(), "スキーマファイルの読み込みに失敗しました");
 
         let schema = result.unwrap();
@@ -186,7 +190,8 @@ mod tests {
         key3 -> float
         "#;
         let schema_path: PathBuf = setup_test_schema("invalid_schema.txt", schema_content);
-        let result: io::Result<FxHashMap<String, String>> = load_schema(&schema_path);
+        let schema_loader = LoadSchema;
+        let result: io::Result<FxHashMap<String, String>> = schema_loader.load_schema(&schema_path);
 
         // エラーメッセージが適切に表示され、結果がエラーになることを確認
         assert!(result.is_ok(), "不正な形式の行を無視しなければなりません");
