@@ -10,13 +10,13 @@ use utils::output::handle_output;
 
 fn main() -> io::Result<()> {
     let directories = [
-        "config/etc/sysctl.d",
-        "config/run/sysctl.d",
-        "config/usr/local/lib/sysctl.d",
-        "config/usr/lib/sysctl.d",
-        "config/lib/sysctl.d",
-        "config/etc",
-        "config",
+        "test_config/etc/sysctl.d",
+        "test_config/run/sysctl.d",
+        "test_config/usr/local/lib/sysctl.d",
+        "test_config/usr/lib/sysctl.d",
+        "test_config/lib/sysctl.d",
+        "test_config/etc",
+        "test_config",
     ];
 
     // パース結果を格納するマップ

@@ -40,10 +40,10 @@ net.ipv4.tcp_rmem -> float
 
 ### 開発環境でのディレクトリ構成
 
-開発用には、`config/`以下に以下のディレクトリ構造が設定されています。この構造内で`.conf`ファイルを読み込み、システム設定を模擬的に処理します。
+開発用には、`test_config/`以下に以下のディレクトリ構造が設定されています。この構造内で`.conf`ファイルを読み込み、システム設定を模擬的に処理します。
 
 ```
-config/
+test_config/
 ├── etc/
 │   ├── sysctl.conf
 │   └── sysctl.d/
@@ -117,10 +117,10 @@ cargo run
 ```
 
 
-実行すると、指定された`config`ディレクトリ内のすべての`.conf`ファイルが再帰的に処理され、それぞれのファイルごとに以下のような形式で出力されます。
+実行すると、指定された`test_config`ディレクトリ内のすべての`.conf`ファイルが再帰的に処理され、それぞれのファイルごとに以下のような形式で出力されます。
 
 ```
-File: "config/example1.conf"
+File: "test_config/example1.conf"
 {
   "debug": "true",
   "endpoint": "localhost:3000",
@@ -156,13 +156,13 @@ cargo install --path .
 
 ```rust
 let directories = [
-    "config/etc/sysctl.d",
-    "config/run/sysctl.d",
-    "config/usr/local/lib/sysctl.d",
-    "config/usr/lib/sysctl.d",
-    "config/lib/sysctl.d",
-    "config/etc",
-    "config"
+    "test_config/etc/sysctl.d",
+    "test_config/run/sysctl.d",
+    "test_config/usr/local/lib/sysctl.d",
+    "test_config/usr/lib/sysctl.d",
+    "test_config/lib/sysctl.d",
+    "test_config/etc",
+    "test_config"
 ];
 ```
 
@@ -336,7 +336,7 @@ Error: キー 'vm.swappiness' のスキーマ型 ''string'' はサポートさ�
 sh sh.sh
 ```
 
-このスクリプトを実行すると、`config` ディレクトリ内に `long_value_test.conf` というファイルが作成されます。このファイルには、`value.too.long` キーに対して4096文字を超える値が含まれています。
+このスクリプトを実行すると、`test_config` ディレクトリ内に `long_value_test.conf` というファイルが作成されます。このファイルには、`value.too.long` キーに対して4096文字を超える値が含まれています。
 
 #### 2. プログラムの実行
 
@@ -349,7 +349,7 @@ cargo run
 プログラムが `long_value_test.conf` を読み込むと、4096文字を超える値が検出されるため、エラーメッセージが表示されます。出力は以下のようになります。
 
 ```sh
-File: "config/long_value_test.conf"
+File: "test_config/long_value_test.conf"
 thread 'main' panicked at src/main.rs:35:17:
 Error: キー 'value.too.long' の値が4096文字を超えています。👀
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
@@ -362,7 +362,7 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 ### 入力例 1
 
-`config/example1.conf`ファイル：
+`test_config/example1.conf`ファイル：
 
 ```bash
 endpoint = localhost:3000
@@ -373,7 +373,7 @@ log.file = /var/log/console.log
 ### 出力例 1
 
 ```bash
-File: "config/example1.conf"
+File: "test_config/example1.conf"
 {
   "debug": "true",
   "endpoint": "localhost:3000",
@@ -385,7 +385,7 @@ File: "config/example1.conf"
 
 ### 入力例 2
 
-`config/example2.conf`ファイル：
+`test_config/example2.conf`ファイル：
 
 ```bash
 endpoint = localhost:3000
@@ -397,7 +397,7 @@ log.name = default.log
 ### 出力例 2
 
 ```bash
-File: "config/example2.conf"
+File: "test_config/example2.conf"
 {
   "endpoint": "localhost:3000",
   "log": {
@@ -621,11 +621,11 @@ fn test_load_invalid_schema() {
 ```rust
 #[test]
 fn test_validate_against_valid_schema_with_float() {
-    let mut config: FxHashMap<String, String> = FxHashMap::default();
-    config.insert("key1".to_string(), "value".to_string()); // 正しい string
-    config.insert("key2".to_string(), "42".to_string()); // 正しい int
-    config.insert("key3".to_string(), "true".to_string()); // 正しい bool
-    config.insert("key4".to_string(), "3.14".to_string()); // 正しい float
+    let mut test_config: FxHashMap<String, String> = FxHashMap::default();
+    test_config.insert("key1".to_string(), "value".to_string()); // 正しい string
+    test_config.insert("key2".to_string(), "42".to_string()); // 正しい int
+    test_config.insert("key3".to_string(), "true".to_string()); // 正しい bool
+    test_config.insert("key4".to_string(), "3.14".to_string()); // 正しい float
 
     let mut schema: FxHashMap<String, String> = FxHashMap::default();
     schema.insert("key1".to_string(), "string".to_string());
@@ -633,7 +633,7 @@ fn test_validate_against_valid_schema_with_float() {
     schema.insert("key3".to_string(), "bool".to_string());
     schema.insert("key4".to_string(), "float".to_string());
 
-    let result: Result<(), String> = validate_against_schema(&config, &schema);
+    let result: Result<(), String> = validate_against_schema(&test_config, &schema);
     assert!(result.is_ok(), "検証に成功する必要があります");
 }
 ```
@@ -646,14 +646,14 @@ fn test_validate_against_valid_schema_with_float() {
 ```rust
 #[test]
 fn test_validate_with_extra_key() {
-    let mut config: FxHashMap<String, String> = FxHashMap::default();
-    config.insert("key1".to_string(), "value".to_string());
-    config.insert("extra_key".to_string(), "value".to_string()); // スキーマに存在しないキー
+    let mut test_config: FxHashMap<String, String> = FxHashMap::default();
+    test_config.insert("key1".to_string(), "value".to_string());
+    test_config.insert("extra_key".to_string(), "value".to_string()); // スキーマに存在しないキー
 
     let mut schema: FxHashMap<String, String> = FxHashMap::default();
     schema.insert("key1".to_string(), "string".to_string());
 
-    let result: Result<(), String> = validate_against_schema(&config, &schema);
+    let result: Result<(), String> = validate_against_schema(&test_config, &schema);
     assert!(result.is_err(), "検証は失敗する必要があります");
 
     let errors: String = result.unwrap_err();
@@ -669,16 +669,16 @@ fn test_validate_with_extra_key() {
 ```rust
 #[test]
 fn test_validate_mixed_invalid_types() {
-    let mut config: FxHashMap<String, String> = FxHashMap::default();
+    let mut test_config: FxHashMap<String, String> = FxHashMap::default();
 
     // 全て不正な値にする
-    config.insert("key1".to_string(), "3.14".to_string()); // 不正な string (float が入っている)
-    config.insert("key2".to_string(), "value".to_string()); // 不正な int (string が入っている)
-    config.insert("key3".to_string(), "3.14".to_string()); // 不正な int (float が入っている)
-    config.insert("key4".to_string(), "123".to_string()); // 不正な bool (int が入っている)
-    config.insert("key5".to_string(), "value".to_string()); // 不正な bool (string が入っている)
-    config.insert("key6".to_string(), "true".to_string()); // 不正な float (bool が入っている)
-    config.insert("key7".to_string(), "true".to_string()); // 不正な string (bool が入っている)
+    test_config.insert("key1".to_string(), "3.14".to_string()); // 不正な string (float が入っている)
+    test_config.insert("key2".to_string(), "value".to_string()); // 不正な int (string が入っている)
+    test_config.insert("key3".to_string(), "3.14".to_string()); // 不正な int (float が入っている)
+    test_config.insert("key4".to_string(), "123".to_string()); // 不正な bool (int が入っている)
+    test_config.insert("key5".to_string(), "value".to_string()); // 不正な bool (string が入っている)
+    test_config.insert("key6".to_string(), "true".to_string()); // 不正な float (bool が入っている)
+    test_config.insert("key7".to_string(), "true".to_string()); // 不正な string (bool が入っている)
 
     let mut schema: FxHashMap<String, String> = FxHashMap::default();
 
@@ -690,7 +690,7 @@ fn test_validate_mixed_invalid_types() {
     schema.insert("key6".to_string(), "float".to_string()); // key6 は浮動小数点でなければならない
     schema.insert("key7".to_string(), "string".to_string()); // key7 は文字列でなければならない
 
-    let result: Result<(), String> = validate_against_schema(&config, &schema);
+    let result: Result<(), String> = validate_against_schema(&test_config, &schema);
 
     assert!(result.is_err(), "検証は失敗する必要があります");
 
